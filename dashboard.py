@@ -387,50 +387,25 @@ with tab2:
 
 # ═══ TAB 3: 유형·원인 분석 ══════════════════════════════════════════════════
 with tab3:
-    c1, c2 = st.columns(2)
-
-    with c1:
-        with st.container(border=True):
-            st.markdown("**유형별 월별 추이**")
-            st.caption("전체 제품 합산")
-            if "유형" in f.columns:
-                tm = f.dropna(subset=["월","유형"]).groupby(["유형","월"])["수량"].sum().reset_index()
-                fig_t = go.Figure()
-                for i, t in enumerate(sorted(tm["유형"].unique())):
-                    d = tm[tm["유형"]==t].sort_values("월")
-                    clr, _ = PALETTE[i % len(PALETTE)]
-                    fig_t.add_trace(go.Scatter(
-                        x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
-                        name=t, mode="lines+markers",
-                        line=dict(color=clr, width=2),
-                        marker=dict(size=6, color=clr),
-                    ))
-                fig_t.update_layout(**BASE, height=320,
-                                    margin=dict(t=10,b=30,l=40,r=10),
-                                    legend=dict(orientation="h",y=1.15,x=0,font=dict(size=10)))
-                st.plotly_chart(fig_t, use_container_width=True)
-
-    with c2:
-        with st.container(border=True):
-            st.markdown("**원인별 월별 추이**")
-            st.caption("전체 제품 합산")
-            if "원인" in f.columns:
-                cm = f[f["원인"].astype(str).str.strip() != ""].dropna(subset=["월"])
-                cm = cm.groupby(["원인","월"])["수량"].sum().reset_index()
-                fig_c = go.Figure()
-                for i, c in enumerate(sorted(cm["원인"].unique())):
-                    d = cm[cm["원인"]==c].sort_values("월")
-                    clr, _ = PALETTE[i % len(PALETTE)]
-                    fig_c.add_trace(go.Scatter(
-                        x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
-                        name=c, mode="lines+markers",
-                        line=dict(color=clr, width=2),
-                        marker=dict(size=6, color=clr),
-                    ))
-                fig_c.update_layout(**BASE, height=320,
-                                    margin=dict(t=10,b=30,l=40,r=10),
-                                    legend=dict(orientation="h",y=1.15,x=0,font=dict(size=10)))
-                st.plotly_chart(fig_c, use_container_width=True)
+    with st.container(border=True):
+        st.markdown("**유형별 월별 추이**")
+        st.caption("전체 제품 합산")
+        if "유형" in f.columns:
+            tm = f.dropna(subset=["월","유형"]).groupby(["유형","월"])["수량"].sum().reset_index()
+            fig_t = go.Figure()
+            for i, t in enumerate(sorted(tm["유형"].unique())):
+                d = tm[tm["유형"]==t].sort_values("월")
+                clr, _ = PALETTE[i % len(PALETTE)]
+                fig_t.add_trace(go.Scatter(
+                    x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
+                    name=t, mode="lines+markers",
+                    line=dict(color=clr, width=2.5),
+                    marker=dict(size=7, color=clr, line=dict(width=2, color="white")),
+                ))
+            fig_t.update_layout(**BASE, height=320,
+                                margin=dict(t=10,b=30,l=40,r=10),
+                                legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)))
+            st.plotly_chart(fig_t, use_container_width=True)
 
     c3, c4 = st.columns(2)
     with c3:
