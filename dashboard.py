@@ -145,11 +145,9 @@ done_pct  = round(done_cnt / total_cnt * 100, 1) if total_cnt else 0
 # KPI cards using native st.metric (reliable on cloud)
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1:
-    st.metric(
-        f"이번달 접수 ({cur_m}월)",
-        f"{cur_cnt}건",
-        f"{'▲' if delta >= 0 else '▼'} {abs(delta)}건 전월비"
-    )
+    # delta를 숫자로 넘겨야 Streamlit이 방향 화살표 하나만 표시
+    st.metric(f"이번달 접수 ({cur_m}월)", f"{cur_cnt}건",
+              f"{delta:+d}건 전월비")
 with k2:
     st.metric(f"전월 접수 ({prev_m}월)", f"{prev_cnt}건",
               f"{prev_pct}% 완료율", delta_color="off")
