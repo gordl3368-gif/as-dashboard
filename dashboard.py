@@ -203,6 +203,31 @@ done_cnt  = len(f[f["상태"] == "완료"])
 prog_cnt  = total_cnt - done_cnt
 done_pct  = round(done_cnt / total_cnt * 100, 1) if total_cnt else 0
 
+# Weekly stats
+_today_dt        = datetime.date.today()
+_this_week_start = _today_dt - datetime.timedelta(days=_today_dt.weekday())
+_last_week_start = _this_week_start - datetime.timedelta(weeks=1)
+_last_week_end   = _this_week_start - datetime.timedelta(days=1)
+
+_df_dated = df[df["접수일자"].notna()].copy()
+_df_dated["_date"] = _df_dated["접수일자"].dt.date
+
+_this_w = _df_dated[_df_dated["_date"] >= _this_week_start]
+_last_w = _df_dated[(_df_dated["_date"] >= _last_week_start) & (_df_dated["_date"] <= _last_week_end)]
+
+_weeks_rows = []
+for _i in range(7, -1, -1):
+    _ws = _this_week_start - datetime.timedelta(weeks=_i)
+    _we = _ws + datetime.timedelta(days=6)
+    _wd = _df_dated[(_df_dated["_date"] >= _ws) & (_df_dated["_date"] <= _we)]
+    _weeks_rows.append({
+        "label": f"{_ws.month}/{_ws.day}",
+        "접수": len(_wd),
+        "완료": len(_wd[_wd["상태"] == "완료"]),
+        "진행중": len(_wd[_wd["상태"] != "완료"]),
+    })
+_weeks_df = pd.DataFrame(_weeks_rows)
+
 # KPI
 k1, k2, k3, k4, k5 = st.columns(5)
 with k1: st.metric(f"이번달 접수 ({cur_m}월)", f"{cur_cnt}건", f"{delta:+d}건 전월비")
@@ -313,6 +338,43 @@ def analysis_section(data, group_col, title, chart_fn="line"):
 
 # ═══ TAB 1: 종합현황 ════════════════════════════════════════════════════════
 with tab1:
+    # 주간 현황
+    with st.container(border=True):
+        st.markdown("**주간 진행 현황**")
+        _tw_cnt  = len(_this_w)
+        _tw_done = len(_this_w[_this_w["상태"] == "완료"])
+        _tw_prog = _tw_cnt - _tw_done
+        _lw_cnt  = len(_last_w)
+        _lw_done = len(_last_w[_last_w["상태"] == "완료"])
+        _lw_prog = _lw_cnt - _lw_done
+
+        wc1, wc2, wc3, wc4, wc5, wc6 = st.columns(6)
+        with wc1: st.metric("이번주 접수", f"{_tw_cnt}건", f"{_tw_cnt - _lw_cnt:+d}건 전주비")
+        with wc2: st.metric("이번주 완료", f"{_tw_done}건", delta_color="off")
+        with wc3: st.metric("이번주 진행중", f"{_tw_prog}건", delta_color="off")
+        with wc4: st.metric("지난주 접수", f"{_lw_cnt}건", delta_color="off")
+        with wc5: st.metric("지난주 완료", f"{_lw_done}건", delta_color="off")
+        with wc6: st.metric("지난주 진행중", f"{_lw_prog}건", delta_color="off")
+
+        fig_w = go.Figure()
+        fig_w.add_trace(go.Bar(
+            x=_weeks_df["label"], y=_weeks_df["접수"],
+            name="접수", marker=dict(color="#1a73e8", opacity=0.85),
+            text=_weeks_df["접수"], textposition="outside", textfont=dict(size=11),
+        ))
+        fig_w.add_trace(go.Bar(
+            x=_weeks_df["label"], y=_weeks_df["완료"],
+            name="완료", marker=dict(color="#34a853", opacity=0.85),
+        ))
+        fig_w.update_layout(
+            **BASE, height=260, barmode="overlay",
+            margin=dict(t=20, b=30, l=40, r=10),
+            legend=dict(orientation="h", y=1.1, x=0, font=dict(size=11)),
+        )
+        st.plotly_chart(fig_w, use_container_width=True)
+
+    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+
     # 제품별 월별 멀티라인
     c1, c2 = st.columns([3, 1])
     with c1:
