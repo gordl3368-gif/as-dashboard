@@ -10,14 +10,16 @@ SPREADSHEET_ID = "1tsdHzv1l__d63BQpTf6yFnxRn22KhpCwo7HJG61oYwg"
 GS_SHEET_NAME  = "고객자산관리대장"
 SA_PATH        = r"C:\Users\user\AS자동화\보고서발송\service_account.json"
 
+import base64 as _b64
+
 def _load_logo():
     for p in [
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_base64.txt"),
-        r"C:\Users\user\AS자동화\logo_base64.txt",
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo.png"),
+        r"C:\Users\user\AS자동화\대시보드\logo.png",
     ]:
         try:
-            with open(p, "r") as f:
-                return f.read().strip()
+            with open(p, "rb") as f:
+                return "data:image/png;base64," + _b64.b64encode(f.read()).decode()
         except Exception:
             pass
     return None
