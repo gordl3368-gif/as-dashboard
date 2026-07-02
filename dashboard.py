@@ -83,6 +83,8 @@ def load_data():
             except:
                 return None
         df["월"] = df["HA번호"].apply(exm) if "HA번호" in df.columns else df["접수일자"].dt.month
+        if "처치" in df.columns:
+            df["처치_분류"] = df["처치"].apply(_map_treatment)
         return df, None
     except Exception as e:
         return None, str(e)
@@ -92,6 +94,25 @@ df, err = load_data()
 today  = datetime.date.today()
 cur_m  = today.month
 prev_m = cur_m - 1 if cur_m > 1 else 12
+
+TREAT_MAP = [
+    ("PCB·메인보드 교체",              ["pcb", "메인보드"]),
+    ("핫멜트 작업",                    ["핫멜트", "핫 멜트", "핫멧트", "핫맬트"]),
+    ("펌프 세척 및 suction case 교체", ["세척", "suction", "석션", "튜브"]),
+    ("펌프 교체",                      ["펌프교체", "펌프 교체"]),
+    ("자재 교체",                      ["커버", "cover", "케이스", "case", "키패드", "배터리",
+                                        "행거", "어댑터", "밴드패브릭", "밴드홀더", "밴드패드릭",
+                                        "나사", "캐니스터", "windows", "widdows", "winodws",
+                                        "smps", "ac엔트리", "ac entry", "ac코드", "디스플레이",
+                                        "에어파츠", "플러그", "홀더"]),
+    ("연구소 전달",                    ["연구소"]),
+]
+
+def _map_treatment(val):
+    v = str(val).lower()
+    matched = [cat for cat, kws in TREAT_MAP if any(k.lower() in v for k in kws)]
+    return matched if matched else ["기타"]
+
 
 # Color palette
 PALETTE = [
@@ -421,8 +442,9 @@ with tab2:
             analysis_section(pd_data, "원인", f"{sel_prod} — 원인 분석", chart_fn="line")
 
         # 처리 내역
-        if "처치" in pd_data.columns:
-            analysis_section(pd_data, "처치", f"{sel_prod} — 처리 내역", chart_fn="bar")
+        if "처치_분류" in pd_data.columns:
+            exp = pd_data.explode("처치_분류").copy()
+            analysis_section(exp, "처치_분류", f"{sel_prod} — 처리 내역", chart_fn="bar")
 
 
 # ═══ TAB 3: 유형·원인 분석 ══════════════════════════════════════════════════
