@@ -15,7 +15,10 @@ st.set_page_config(page_title="A/S 현황 대시보드", layout="wide", page_ico
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 html,body,[class*="css"],.stApp{font-family:'Noto Sans KR','Malgun Gothic',sans-serif!important;}
-#MainMenu{visibility:hidden;}footer{visibility:hidden;}.stDeployButton{visibility:hidden;}
+#MainMenu{visibility:hidden;}
+footer{visibility:hidden;}
+.stDeployButton{visibility:hidden;}
+header[data-testid="stHeader"]{display:none!important;}
 .block-container{padding-top:0!important;padding-left:1.2rem!important;padding-right:1.2rem!important;max-width:100%!important;}
 [data-testid="metric-container"]{background:#ffffff;border:1px solid #e8ecf4;border-radius:10px;padding:14px 18px!important;}
 [data-testid="stMetricLabel"]>div{font-size:11px!important;color:#9ca3af!important;}
@@ -93,19 +96,21 @@ BASE = dict(
 
 # Header
 st.markdown(f"""
-<div style="display:flex;align-items:center;justify-content:space-between;
-            padding:14px 0;border-bottom:2px solid #eef1f8;margin-bottom:16px;">
-  <div style="display:flex;align-items:center;gap:14px;">
-    <span style="background:#c0392b;color:#fff;font-size:11px;font-weight:700;
-                 padding:5px 12px;border-radius:5px;letter-spacing:.8px;">시지바이오</span>
-    <div>
-      <div style="font-size:17px;font-weight:600;color:#1a1f36;">큐라시스 A/S 현황 대시보드</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">A/S 접수 · 처리현황 · 원인분석 · 처리내역 | Google Sheets 실시간 연동</div>
-    </div>
+<div style="display:flex;align-items:stretch;border-bottom:3px solid #e0e4ef;margin-bottom:18px;background:#fff;">
+  <div style="background:#c0392b;padding:14px 22px;display:flex;flex-direction:column;justify-content:center;min-width:140px;flex-shrink:0;">
+    <div style="color:#fff;font-size:15px;font-weight:700;letter-spacing:1.2px;line-height:1.2;">시지바이오</div>
+    <div style="color:rgba(255,255,255,0.65);font-size:9.5px;margin-top:3px;letter-spacing:.5px;">SJBIO MEDICAL</div>
   </div>
-  <div style="font-size:11px;color:#9ca3af;text-align:right;line-height:1.8;">
-    {today.strftime('%Y년 %m월 %d일')} 기준<br>
-    <span style="color:#1a73e8;font-weight:500;">● 실시간 (1분 갱신)</span>
+  <div style="width:1px;background:#e0e4ef;flex-shrink:0;"></div>
+  <div style="padding:12px 22px;display:flex;flex-direction:column;justify-content:center;">
+    <div style="font-size:17px;font-weight:600;color:#1a1f36;letter-spacing:-.2px;">큐라시스 A/S 센터 현황</div>
+    <div style="font-size:11px;color:#9ca3af;margin-top:4px;">A/S 접수 · 처리현황 · 원인분석 · 처리내역 &nbsp;|&nbsp; Google Sheets 실시간 연동</div>
+  </div>
+  <div style="margin-left:auto;padding:12px 22px;display:flex;align-items:center;gap:20px;flex-shrink:0;">
+    <div style="font-size:11px;color:#9ca3af;text-align:right;line-height:1.9;">
+      {today.strftime('%Y년 %m월 %d일')} 기준<br>
+      <span style="color:#1a73e8;font-weight:500;">● 실시간 (1분 갱신)</span>
+    </div>
   </div>
 </div>
 """, unsafe_allow_html=True)
