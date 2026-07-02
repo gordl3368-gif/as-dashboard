@@ -395,33 +395,49 @@ with tab1:
             with _wdkpi2: st.metric("완료", f"{_wd_done}건", delta_color="off")
             with _wdkpi3: st.metric("진행중", f"{_wd_cnt - _wd_done}건", delta_color="off")
 
-            _wa, _wb, _wc = st.columns(3)
+            _wa, _wb = st.columns(2)
 
-            def _week_bar(col, data, group_col, title):
+            def _week_hbar(col, data, group_col, title, color_single=None):
                 with col:
                     if group_col not in data.columns:
                         return
                     vc = data[data[group_col].astype(str).str.strip() != ""] \
                              .groupby(group_col)["수량"].sum().reset_index() \
-                             .sort_values("수량", ascending=False)
+                             .sort_values("수량", ascending=True)
                     if vc.empty:
                         st.caption(f"{title} 데이터 없음")
                         return
+                    colors = color_single if color_single else \
+                             [PALETTE[i % len(PALETTE)][0] for i in range(len(vc))]
                     fig = go.Figure(go.Bar(
-                        x=vc[group_col], y=vc["수량"],
-                        marker=dict(color=[PALETTE[i % len(PALETTE)][0] for i in range(len(vc))]),
-                        text=vc["수량"], textposition="outside", textfont=dict(size=11),
+                        y=vc[group_col], x=vc["수량"],
+                        orientation="h",
+                        marker=dict(
+                            color=colors,
+                            line=dict(width=0),
+                            opacity=0.88,
+                        ),
+                        text=vc["수량"],
+                        textposition="outside",
+                        textfont=dict(size=12, color="#1a1f36"),
+                        cliponaxis=False,
                     ))
-                    fig.update_layout(**BASE, height=240, title=dict(text=title, font=dict(size=12), x=0),
-                                      margin=dict(t=35, b=30, l=30, r=10), showlegend=False)
+                    fig.update_layout(
+                        plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                        height=max(180, len(vc) * 44 + 60),
+                        title=dict(text=title, font=dict(size=13, color="#1a1f36", family="Noto Sans KR, sans-serif"), x=0),
+                        margin=dict(t=40, b=10, l=10, r=60),
+                        xaxis=dict(gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
+                        yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False,
+                                   tickfont=dict(size=12, color="#374151")),
+                        showlegend=False,
+                    )
                     st.plotly_chart(fig, use_container_width=True)
 
-            _week_bar(_wa, _sel_wd, "유형",  "유형별")
-            _week_bar(_wb, _sel_wd, "원인",  "원인별")
-
-            if "처치_분류" in _sel_wd.columns:
-                _sel_wd_exp = _sel_wd.explode("처치_분류")
-                _week_bar(_wc, _sel_wd_exp, "처치_분류", "처리내역별")
+            _week_hbar(_wa, _sel_wd, "제품명", "기기별 입고 수량",
+                       color_single=[PALETTE[i % len(PALETTE)][0]
+                                     for i in range(len(_sel_wd["제품명"].dropna().unique()))])
+            _week_hbar(_wb, _sel_wd, "유형", "유형별 접수 현황")
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
