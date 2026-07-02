@@ -557,9 +557,10 @@ with tab2:
                 text=mo.values, textposition="top center", textfont=dict(size=10),
             ))
             fig_p.update_layout(**BASE, height=240,
-                                margin=dict(t=10,b=30,l=40,r=10), showlegend=False)
+                                margin=dict(t=36,b=30,l=40,r=10), showlegend=False)
             fig_p.update_xaxes(categoryorder="array",
                                categoryarray=[f"{m}월" for m in all_months])
+            fig_p.update_yaxes(rangemode="tozero", range=[0, mo.max() * 1.18])
             st.plotly_chart(fig_p, use_container_width=True)
 
         # 접수 내용 (유형별)
