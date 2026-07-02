@@ -10,6 +10,20 @@ SPREADSHEET_ID = "1tsdHzv1l__d63BQpTf6yFnxRn22KhpCwo7HJG61oYwg"
 GS_SHEET_NAME  = "고객자산관리대장"
 SA_PATH        = r"C:\Users\user\AS자동화\보고서발송\service_account.json"
 
+def _load_logo():
+    for p in [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "logo_base64.txt"),
+        r"C:\Users\user\AS자동화\logo_base64.txt",
+    ]:
+        try:
+            with open(p, "r") as f:
+                return f.read().strip()
+        except Exception:
+            pass
+    return None
+
+LOGO_DATA = _load_logo()
+
 st.set_page_config(page_title="A/S 현황 대시보드", layout="wide", page_icon="🔧")
 
 st.markdown("""<style>
@@ -94,12 +108,18 @@ BASE = dict(
     yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero"),
 )
 
+_logo_html = (
+    f'<img src="{LOGO_DATA}" style="height:48px;width:auto;display:block;">'
+    if LOGO_DATA else
+    '<div style="color:#fff;font-size:15px;font-weight:700;letter-spacing:1.2px;">CGBIO</div>'
+)
+_logo_bg = "background:#fff;" if LOGO_DATA else "background:#c0392b;"
+
 # Header
 st.markdown(f"""
 <div style="display:flex;align-items:stretch;border-bottom:3px solid #e0e4ef;margin-bottom:18px;background:#fff;">
-  <div style="background:#c0392b;padding:14px 22px;display:flex;flex-direction:column;justify-content:center;min-width:140px;flex-shrink:0;">
-    <div style="color:#fff;font-size:15px;font-weight:700;letter-spacing:1.2px;line-height:1.2;">시지바이오</div>
-    <div style="color:rgba(255,255,255,0.65);font-size:9.5px;margin-top:3px;letter-spacing:.5px;">SJBIO MEDICAL</div>
+  <div style="{_logo_bg}padding:10px 20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+    {_logo_html}
   </div>
   <div style="width:1px;background:#e0e4ef;flex-shrink:0;"></div>
   <div style="padding:12px 22px;display:flex;flex-direction:column;justify-content:center;">
