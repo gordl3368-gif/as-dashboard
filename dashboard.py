@@ -191,10 +191,19 @@ def pivot_table(data, group_col):
     return pv
 
 
+def _x_axis_cfg(months_list):
+    """월 순서 고정 xaxis 설정"""
+    return dict(
+        gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=8),
+        categoryorder="array",
+        categoryarray=[f"{m}월" for m in months_list],
+    )
+
+
 def mini_line(data, label, color, fill, months_list):
     monthly = data.groupby("월")["수량"].sum().reindex(months_list, fill_value=0)
     fig = go.Figure(go.Scatter(
-        x=[f"{m}월" for m in monthly.index], y=monthly.values,
+        x=[f"{m}월" for m in months_list], y=monthly.values,
         mode="lines+markers",
         line=dict(color=color, width=2),
         marker=dict(size=5, color=color, line=dict(width=1.5, color="white")),
@@ -204,7 +213,7 @@ def mini_line(data, label, color, fill, months_list):
         title=dict(text=label, font=dict(size=11, color="#1a1f36"), x=0),
         height=160, margin=dict(t=30, b=20, l=28, r=8),
         plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=8)),
+        xaxis=_x_axis_cfg(months_list),
         yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero", tickfont=dict(size=8)),
         showlegend=False, font=FONT,
     )
@@ -214,14 +223,14 @@ def mini_line(data, label, color, fill, months_list):
 def mini_bar(data, label, color, months_list):
     monthly = data.groupby("월")["수량"].sum().reindex(months_list, fill_value=0)
     fig = go.Figure(go.Bar(
-        x=[f"{m}월" for m in monthly.index], y=monthly.values,
+        x=[f"{m}월" for m in months_list], y=monthly.values,
         marker=dict(color=color, opacity=0.85),
     ))
     fig.update_layout(
         title=dict(text=label, font=dict(size=11, color="#1a1f36"), x=0),
         height=160, margin=dict(t=30, b=20, l=28, r=8),
         plot_bgcolor="white", paper_bgcolor="white",
-        xaxis=dict(gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=8)),
+        xaxis=_x_axis_cfg(months_list),
         yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero", tickfont=dict(size=8)),
         showlegend=False, font=FONT,
     )
@@ -262,19 +271,22 @@ with tab1:
             st.markdown("**제품별 월별 A/S 접수 추이**")
             st.caption("제품별 라인 비교")
             pm = f.dropna(subset=["월"]).groupby(["제품명","월"])["수량"].sum().reset_index()
+            x_labels = [f"{m}월" for m in all_months]
             fig1 = go.Figure()
             for i, prod in enumerate(sorted(pm["제품명"].unique())):
-                d = pm[pm["제품명"]==prod].sort_values("월")
+                vals = pm[pm["제품명"]==prod].set_index("월")["수량"].reindex(all_months, fill_value=0)
                 clr, _ = PALETTE[i % len(PALETTE)]
                 fig1.add_trace(go.Scatter(
-                    x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
+                    x=x_labels, y=vals.values,
                     name=prod, mode="lines+markers",
                     line=dict(color=clr, width=2.5),
                     marker=dict(size=7, color=clr, line=dict(width=2, color="white")),
                 ))
             fig1.update_layout(**BASE, height=300,
                                margin=dict(t=10,b=30,l=40,r=10),
-                               legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)))
+                               legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)),
+                               xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
+                                          categoryorder="array", categoryarray=x_labels))
             st.plotly_chart(fig1, use_container_width=True)
 
     with c2:
@@ -361,7 +373,7 @@ with tab2:
             clr, fill = PALETTE[prod_all.index(sel_prod) % len(PALETTE)]
             mo = pd_data.groupby("월")["수량"].sum().reindex(all_months, fill_value=0)
             fig_p = go.Figure(go.Scatter(
-                x=[f"{m}월" for m in mo.index], y=mo.values,
+                x=[f"{m}월" for m in all_months], y=mo.values,
                 mode="lines+markers+text",
                 line=dict(color=clr, width=2.5),
                 marker=dict(size=8, color=clr, line=dict(width=2, color="white")),
@@ -369,7 +381,10 @@ with tab2:
                 text=mo.values, textposition="top center", textfont=dict(size=10),
             ))
             fig_p.update_layout(**BASE, height=240,
-                                margin=dict(t=10,b=30,l=40,r=10), showlegend=False)
+                                margin=dict(t=10,b=30,l=40,r=10), showlegend=False,
+                                xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
+                                           categoryorder="array",
+                                           categoryarray=[f"{m}월" for m in all_months]))
             st.plotly_chart(fig_p, use_container_width=True)
 
         # 접수 내용 (유형별)
@@ -392,19 +407,22 @@ with tab3:
         st.caption("전체 제품 합산")
         if "유형" in f.columns:
             tm = f.dropna(subset=["월","유형"]).groupby(["유형","월"])["수량"].sum().reset_index()
+            x_labels = [f"{m}월" for m in all_months]
             fig_t = go.Figure()
             for i, t in enumerate(sorted(tm["유형"].unique())):
-                d = tm[tm["유형"]==t].sort_values("월")
+                vals = tm[tm["유형"]==t].set_index("월")["수량"].reindex(all_months, fill_value=0)
                 clr, _ = PALETTE[i % len(PALETTE)]
                 fig_t.add_trace(go.Scatter(
-                    x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
+                    x=x_labels, y=vals.values,
                     name=t, mode="lines+markers",
                     line=dict(color=clr, width=2.5),
                     marker=dict(size=7, color=clr, line=dict(width=2, color="white")),
                 ))
             fig_t.update_layout(**BASE, height=320,
                                 margin=dict(t=10,b=30,l=40,r=10),
-                                legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)))
+                                legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)),
+                                xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
+                                           categoryorder="array", categoryarray=x_labels))
             st.plotly_chart(fig_t, use_container_width=True)
 
     c3, c4 = st.columns(2)
