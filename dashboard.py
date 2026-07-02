@@ -111,16 +111,16 @@ BASE = dict(
 )
 
 _logo_html = (
-    f'<img src="{LOGO_DATA}" style="height:48px;width:auto;display:block;">'
+    f'<img src="{LOGO_DATA}" style="width:100%;height:100%;object-fit:cover;display:block;">'
     if LOGO_DATA else
     '<div style="color:#fff;font-size:15px;font-weight:700;letter-spacing:1.2px;">CGBIO</div>'
 )
-_logo_bg = "background:#fff;" if LOGO_DATA else "background:#c0392b;"
+_logo_bg = "" if LOGO_DATA else "background:#c0392b;"
 
 # Header
 st.markdown(f"""
 <div style="display:flex;align-items:stretch;border-bottom:3px solid #e0e4ef;margin-bottom:18px;background:#fff;">
-  <div style="{_logo_bg}padding:10px 20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+  <div style="{_logo_bg}width:160px;flex-shrink:0;overflow:hidden;">
     {_logo_html}
   </div>
   <div style="width:1px;background:#e0e4ef;flex-shrink:0;"></div>
