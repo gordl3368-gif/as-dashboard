@@ -220,8 +220,9 @@ for _i in range(7, -1, -1):
     _ws = _this_week_start - datetime.timedelta(weeks=_i)
     _we = _ws + datetime.timedelta(days=6)
     _wd = _df_dated[(_df_dated["_date"] >= _ws) & (_df_dated["_date"] <= _we)]
+    _wnum = (_ws.day - 1) // 7 + 1
     _weeks_rows.append({
-        "label": f"{_ws.month}/{_ws.day}",
+        "label": f"{_ws.month}월 {_wnum}주차",
         "접수": len(_wd),
         "완료": len(_wd[_wd["상태"] == "완료"]),
         "진행중": len(_wd[_wd["상태"] != "완료"]),
@@ -372,6 +373,55 @@ with tab1:
             legend=dict(orientation="h", y=1.1, x=0, font=dict(size=11)),
         )
         st.plotly_chart(fig_w, use_container_width=True)
+
+    # 주차별 상세 분석
+    with st.container(border=True):
+        st.markdown("**주차별 상세 분석**")
+        _week_labels = [r["label"] for r in _weeks_rows]
+        _sel_week_label = st.selectbox("주차 선택", _week_labels,
+                                       index=len(_week_labels)-1, key="week_sel")
+        _sel_idx = _week_labels.index(_sel_week_label)
+        _sel_ws  = _this_week_start - datetime.timedelta(weeks=(7 - _sel_idx))
+        _sel_we  = _sel_ws + datetime.timedelta(days=6)
+        _sel_wd  = _df_dated[(_df_dated["_date"] >= _sel_ws) & (_df_dated["_date"] <= _sel_we)]
+
+        if _sel_wd.empty:
+            st.info("해당 주차 데이터가 없습니다.")
+        else:
+            _wd_cnt  = len(_sel_wd)
+            _wd_done = len(_sel_wd[_sel_wd["상태"] == "완료"])
+            _wdkpi1, _wdkpi2, _wdkpi3 = st.columns(3)
+            with _wdkpi1: st.metric("접수", f"{_wd_cnt}건", delta_color="off")
+            with _wdkpi2: st.metric("완료", f"{_wd_done}건", delta_color="off")
+            with _wdkpi3: st.metric("진행중", f"{_wd_cnt - _wd_done}건", delta_color="off")
+
+            _wa, _wb, _wc = st.columns(3)
+
+            def _week_bar(col, data, group_col, title):
+                with col:
+                    if group_col not in data.columns:
+                        return
+                    vc = data[data[group_col].astype(str).str.strip() != ""] \
+                             .groupby(group_col)["수량"].sum().reset_index() \
+                             .sort_values("수량", ascending=False)
+                    if vc.empty:
+                        st.caption(f"{title} 데이터 없음")
+                        return
+                    fig = go.Figure(go.Bar(
+                        x=vc[group_col], y=vc["수량"],
+                        marker=dict(color=[PALETTE[i % len(PALETTE)][0] for i in range(len(vc))]),
+                        text=vc["수량"], textposition="outside", textfont=dict(size=11),
+                    ))
+                    fig.update_layout(**BASE, height=240, title=dict(text=title, font=dict(size=12), x=0),
+                                      margin=dict(t=35, b=30, l=30, r=10), showlegend=False)
+                    st.plotly_chart(fig, use_container_width=True)
+
+            _week_bar(_wa, _sel_wd, "유형",  "유형별")
+            _week_bar(_wb, _sel_wd, "원인",  "원인별")
+
+            if "처치_분류" in _sel_wd.columns:
+                _sel_wd_exp = _sel_wd.explode("처치_분류")
+                _week_bar(_wc, _sel_wd_exp, "처치_분류", "처리내역별")
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
