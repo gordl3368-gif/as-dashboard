@@ -90,11 +90,6 @@ def load_data():
         return None, str(e)
 
 
-df, err = load_data()
-today  = datetime.date.today()
-cur_m  = today.month
-prev_m = cur_m - 1 if cur_m > 1 else 12
-
 TREAT_MAP = [
     ("PCB·메인보드 교체",              ["pcb", "메인보드"]),
     ("핫멜트 작업",                    ["핫멜트", "핫 멜트", "핫멧트", "핫맬트"]),
@@ -112,6 +107,12 @@ def _map_treatment(val):
     v = str(val).lower()
     matched = [cat for cat, kws in TREAT_MAP if any(k.lower() in v for k in kws)]
     return matched if matched else ["기타"]
+
+
+df, err = load_data()
+today  = datetime.date.today()
+cur_m  = today.month
+prev_m = cur_m - 1 if cur_m > 1 else 12
 
 
 # Color palette
