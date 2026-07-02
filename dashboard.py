@@ -12,13 +12,10 @@ SA_PATH        = r"C:\Users\user\AS자동화\보고서발송\service_account.jso
 
 st.set_page_config(page_title="A/S 현황 대시보드", layout="wide", page_icon="🔧")
 
-# CSS: short and safe (no Korean, no special chars in comments)
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
 html,body,[class*="css"],.stApp{font-family:'Noto Sans KR','Malgun Gothic',sans-serif!important;}
-#MainMenu{visibility:hidden;}
-footer{visibility:hidden;}
-.stDeployButton{visibility:hidden;}
+#MainMenu{visibility:hidden;}footer{visibility:hidden;}.stDeployButton{visibility:hidden;}
 .block-container{padding-top:0!important;padding-left:1.2rem!important;padding-right:1.2rem!important;max-width:100%!important;}
 [data-testid="metric-container"]{background:#ffffff;border:1px solid #e8ecf4;border-radius:10px;padding:14px 18px!important;}
 [data-testid="stMetricLabel"]>div{font-size:11px!important;color:#9ca3af!important;}
@@ -77,16 +74,33 @@ today  = datetime.date.today()
 cur_m  = today.month
 prev_m = cur_m - 1 if cur_m > 1 else 12
 
-# Header (inline styles only - no CSS classes)
+# Color palette
+PALETTE = [
+    ("#1a73e8", "rgba(26,115,232,0.1)"),
+    ("#ea4335", "rgba(234,67,53,0.1)"),
+    ("#34a853", "rgba(52,168,83,0.1)"),
+    ("#fbbc04", "rgba(251,188,4,0.1)"),
+    ("#9334e6", "rgba(147,52,230,0.1)"),
+    ("#ff6d00", "rgba(255,109,0,0.1)"),
+    ("#00bcd4", "rgba(0,188,212,0.1)"),
+]
+FONT = dict(family="Noto Sans KR, Malgun Gothic, sans-serif", size=12)
+BASE = dict(
+    plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+    xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
+    yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero"),
+)
+
+# Header
 st.markdown(f"""
 <div style="display:flex;align-items:center;justify-content:space-between;
-            padding:14px 0 14px;border-bottom:2px solid #eef1f8;margin-bottom:16px;">
+            padding:14px 0;border-bottom:2px solid #eef1f8;margin-bottom:16px;">
   <div style="display:flex;align-items:center;gap:14px;">
     <span style="background:#c0392b;color:#fff;font-size:11px;font-weight:700;
-                 padding:5px 12px;border-radius:5px;letter-spacing:.8px;flex-shrink:0;">시지바이오</span>
+                 padding:5px 12px;border-radius:5px;letter-spacing:.8px;">시지바이오</span>
     <div>
       <div style="font-size:17px;font-weight:600;color:#1a1f36;">큐라시스 A/S 현황 대시보드</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">A/S 접수 · 처리현황 · 중복 S/N 관리 | Google Sheets 실시간 연동</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">A/S 접수 · 처리현황 · 원인분석 · 처리내역 | Google Sheets 실시간 연동</div>
     </div>
   </div>
   <div style="font-size:11px;color:#9ca3af;text-align:right;line-height:1.8;">
@@ -119,14 +133,12 @@ if sel_m: f = f[f["월"].isin(sel_m)]
 if sel_p: f = f[f["제품명"].isin(sel_p)]
 if sel_t and "유형" in f.columns: f = f[f["유형"].isin(sel_t)]
 
-# Duplicate S/N
 EXCL = ["식별불가","불명","미상","없음","N/A","n/a","-",""]
 sn_valid  = df[~df["시리얼"].astype(str).str.strip().str.lower().isin([x.lower() for x in EXCL])]
 sn_counts = sn_valid["시리얼"].value_counts()
 dup_sns   = sn_counts[sn_counts > 1]
 dup_cnt   = len(dup_sns)
 
-# Stats
 def month_stats(data, m):
     d = data[data["월"] == m]
     cnt  = len(d)
@@ -134,7 +146,7 @@ def month_stats(data, m):
     pct  = round(done / cnt * 100, 1) if cnt else 0
     return cnt, done, pct
 
-cur_cnt,  cur_done,  cur_pct  = month_stats(df, cur_m)
+cur_cnt, cur_done, cur_pct   = month_stats(df, cur_m)
 prev_cnt, prev_done, prev_pct = month_stats(df, prev_m)
 delta     = cur_cnt - prev_cnt
 total_cnt = len(f)
@@ -142,216 +154,361 @@ done_cnt  = len(f[f["상태"] == "완료"])
 prog_cnt  = total_cnt - done_cnt
 done_pct  = round(done_cnt / total_cnt * 100, 1) if total_cnt else 0
 
-# KPI cards using native st.metric (reliable on cloud)
+# KPI
 k1, k2, k3, k4, k5 = st.columns(5)
-with k1:
-    # delta를 숫자로 넘겨야 Streamlit이 방향 화살표 하나만 표시
-    st.metric(f"이번달 접수 ({cur_m}월)", f"{cur_cnt}건",
-              f"{delta:+d}건 전월비")
-with k2:
-    st.metric(f"전월 접수 ({prev_m}월)", f"{prev_cnt}건",
-              f"{prev_pct}% 완료율", delta_color="off")
-with k3:
-    st.metric("처리 완료율", f"{done_pct}%",
-              f"{done_cnt} / {total_cnt}건", delta_color="off")
-with k4:
-    st.metric("진행중", f"{prog_cnt}건", "처리 대기 중", delta_color="off")
-with k5:
-    st.metric("중복 S/N", f"{dup_cnt}건",
-              "⚠ 재접수 주의" if dup_cnt else "이상 없음",
-              delta_color="inverse" if dup_cnt else "off")
+with k1: st.metric(f"이번달 접수 ({cur_m}월)", f"{cur_cnt}건", f"{delta:+d}건 전월비")
+with k2: st.metric(f"전월 접수 ({prev_m}월)", f"{prev_cnt}건", f"{prev_pct}% 완료율", delta_color="off")
+with k3: st.metric("처리 완료율", f"{done_pct}%", f"{done_cnt} / {total_cnt}건", delta_color="off")
+with k4: st.metric("진행중", f"{prog_cnt}건", "처리 대기 중", delta_color="off")
+with k5: st.metric("중복 S/N", f"{dup_cnt}건",
+                   "⚠ 재접수 주의" if dup_cnt else "이상 없음",
+                   delta_color="inverse" if dup_cnt else "off")
 
-st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-# Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["📊 종합현황", "🔍 유형별 분석", "📋 상세목록", "⚠️ 중복 S/N"])
-
-C_BLUE   = "#1a73e8"
-C_GREEN  = "#34a853"
-C_YELLOW = "#fbbc04"
-C_RED    = "#ea4335"
-C_PURPLE = "#9334e6"
-FONT     = dict(family="Noto Sans KR, Malgun Gothic, sans-serif", size=12)
-BASE_LAYOUT = dict(
-    plot_bgcolor="white", paper_bgcolor="white",
-    margin=dict(t=10, b=30, l=40, r=20),
-    font=FONT,
-    xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
-    yaxis=dict(gridcolor="#f0f4f8", zeroline=False),
-    legend=dict(orientation="h", y=1.15, x=0, font=dict(size=11)),
-)
+all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N"])
 
 
-# TAB 1
+# ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
+
+def pivot_table(data, group_col):
+    """월별 피벗 테이블 + 합계 + 비율"""
+    if data.empty or group_col not in data.columns:
+        return pd.DataFrame()
+    clean = data[data[group_col].astype(str).str.strip() != ""]
+    if clean.empty:
+        return pd.DataFrame()
+    pv = clean.groupby([group_col, "월"])["수량"].sum().unstack(fill_value=0)
+    for m in all_months:
+        if m not in pv.columns:
+            pv[m] = 0
+    pv = pv[[m for m in all_months if m in pv.columns]]
+    pv["합계"] = pv.sum(axis=1)
+    total = pv["합계"].sum()
+    pv["비율"] = (pv["합계"] / total * 100).round(1).astype(str) + "%" if total > 0 else "0%"
+    pv.columns = [f"{int(c)}월" if isinstance(c, (int, float)) else c for c in pv.columns]
+    return pv
+
+
+def mini_line(data, label, color, fill, months_list):
+    monthly = data.groupby("월")["수량"].sum().reindex(months_list, fill_value=0)
+    fig = go.Figure(go.Scatter(
+        x=[f"{m}월" for m in monthly.index], y=monthly.values,
+        mode="lines+markers",
+        line=dict(color=color, width=2),
+        marker=dict(size=5, color=color, line=dict(width=1.5, color="white")),
+        fill="tozeroy", fillcolor=fill,
+    ))
+    fig.update_layout(
+        title=dict(text=label, font=dict(size=11, color="#1a1f36"), x=0),
+        height=160, margin=dict(t=30, b=20, l=28, r=8),
+        plot_bgcolor="white", paper_bgcolor="white",
+        xaxis=dict(gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=8)),
+        yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero", tickfont=dict(size=8)),
+        showlegend=False, font=FONT,
+    )
+    return fig
+
+
+def mini_bar(data, label, color, months_list):
+    monthly = data.groupby("월")["수량"].sum().reindex(months_list, fill_value=0)
+    fig = go.Figure(go.Bar(
+        x=[f"{m}월" for m in monthly.index], y=monthly.values,
+        marker=dict(color=color, opacity=0.85),
+    ))
+    fig.update_layout(
+        title=dict(text=label, font=dict(size=11, color="#1a1f36"), x=0),
+        height=160, margin=dict(t=30, b=20, l=28, r=8),
+        plot_bgcolor="white", paper_bgcolor="white",
+        xaxis=dict(gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=8)),
+        yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero", tickfont=dict(size=8)),
+        showlegend=False, font=FONT,
+    )
+    return fig
+
+
+def analysis_section(data, group_col, title, chart_fn="line"):
+    """피벗 테이블 + 2열 미니차트 섹션"""
+    if group_col not in data.columns:
+        return
+    cats = [c for c in data[group_col].dropna().unique() if str(c).strip()]
+    if not cats:
+        return
+    with st.container(border=True):
+        st.markdown(f"**{title}**")
+        pv = pivot_table(data, group_col)
+        if not pv.empty:
+            st.dataframe(pv, use_container_width=True,
+                         height=min(105 + len(cats) * 36, 320))
+        for i in range(0, len(cats), 2):
+            pair = cats[i:i+2]
+            cols = st.columns(len(pair))
+            for j, cat in enumerate(pair):
+                clr, fill = PALETTE[(i + j) % len(PALETTE)]
+                cat_data = data[data[group_col] == cat]
+                fig = mini_line(cat_data, cat, clr, fill, all_months) if chart_fn == "line" \
+                      else mini_bar(cat_data, cat, clr, all_months)
+                with cols[j]:
+                    st.plotly_chart(fig, use_container_width=True)
+
+
+# ═══ TAB 1: 종합현황 ════════════════════════════════════════════════════════
 with tab1:
-    c1, c2 = st.columns(2)
-
+    # 제품별 월별 멀티라인
+    c1, c2 = st.columns([3, 1])
     with c1:
         with st.container(border=True):
-            st.markdown("**월별 A/S 접수 추이**")
-            rng = f"{min(sel_m) if sel_m else '-'}월 ~ {max(sel_m) if sel_m else '-'}월 누적"
-            st.caption(rng)
-            md = f.dropna(subset=["월"]).groupby(["월","상태"])["수량"].sum().reset_index()
-            if not md.empty:
-                pv = md.pivot(index="월", columns="상태", values="수량").fillna(0).reset_index().sort_values("월")
-                xl = pv["월"].astype(int).map(lambda m: f"{m}월")
-                fig = go.Figure()
-                if "완료" in pv.columns:
-                    fig.add_trace(go.Scatter(
-                        x=xl, y=pv["완료"], name="완료",
-                        mode="lines+markers",
-                        line=dict(color=C_GREEN, width=2.5),
-                        marker=dict(size=7, color=C_GREEN, line=dict(width=2, color="white")),
-                        fill="tozeroy", fillcolor="rgba(52,168,83,0.07)"
-                    ))
-                if "진행중" in pv.columns:
-                    fig.add_trace(go.Scatter(
-                        x=xl, y=pv["진행중"], name="진행중",
-                        mode="lines+markers",
-                        line=dict(color=C_YELLOW, width=2.5, dash="dot"),
-                        marker=dict(size=7, color=C_YELLOW, line=dict(width=2, color="white")),
-                    ))
-                fig.update_layout(**BASE_LAYOUT, height=270)
-                st.plotly_chart(fig, use_container_width=True)
+            st.markdown("**제품별 월별 A/S 접수 추이**")
+            st.caption("제품별 라인 비교")
+            pm = f.dropna(subset=["월"]).groupby(["제품명","월"])["수량"].sum().reset_index()
+            fig1 = go.Figure()
+            for i, prod in enumerate(sorted(pm["제품명"].unique())):
+                d = pm[pm["제품명"]==prod].sort_values("월")
+                clr, _ = PALETTE[i % len(PALETTE)]
+                fig1.add_trace(go.Scatter(
+                    x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
+                    name=prod, mode="lines+markers",
+                    line=dict(color=clr, width=2.5),
+                    marker=dict(size=7, color=clr, line=dict(width=2, color="white")),
+                ))
+            fig1.update_layout(**BASE, height=300,
+                               margin=dict(t=10,b=30,l=40,r=10),
+                               legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)))
+            st.plotly_chart(fig1, use_container_width=True)
 
     with c2:
         with st.container(border=True):
-            st.markdown("**제품별 접수 수량**")
-            st.caption("수량 합계 기준")
-            pc = f.groupby("제품명")["수량"].sum().reset_index().sort_values("수량", ascending=True)
-            if not pc.empty:
-                fig2 = go.Figure(go.Bar(
-                    y=pc["제품명"], x=pc["수량"], orientation="h",
-                    marker=dict(color=C_BLUE, opacity=0.85),
-                    text=pc["수량"], textposition="outside",
-                    textfont=dict(size=12, color="#1a1f36")
+            st.markdown("**제품별 비중**")
+            pt = f.groupby("제품명")["수량"].sum().reset_index()
+            if not pt.empty:
+                fig_pie = go.Figure(go.Pie(
+                    labels=pt["제품명"], values=pt["수량"], hole=0.5,
+                    marker=dict(colors=[PALETTE[i % len(PALETTE)][0] for i in range(len(pt))],
+                                line=dict(color="white", width=2)),
+                    textinfo="label+percent", textfont=dict(size=11),
                 ))
-                lo2 = {**BASE_LAYOUT, "height": 270, "margin": dict(t=10, b=30, l=10, r=50)}
-                fig2.update_layout(**lo2)
-                st.plotly_chart(fig2, use_container_width=True)
+                fig_pie.update_layout(height=300, paper_bgcolor="white",
+                                      margin=dict(t=10,b=10,l=10,r=10),
+                                      showlegend=False, font=FONT)
+                st.plotly_chart(fig_pie, use_container_width=True)
 
+    # 제품별 수량 (접기)
+    with st.expander("📦 제품별 접수 수량 상세", expanded=False):
+        pc = f.groupby("제품명")["수량"].sum().reset_index().sort_values("수량", ascending=True)
+        if not pc.empty:
+            fig_b = go.Figure(go.Bar(
+                y=pc["제품명"], x=pc["수량"], orientation="h",
+                marker=dict(color="#1a73e8", opacity=0.85),
+                text=pc["수량"], textposition="outside",
+                textfont=dict(size=12, color="#1a1f36"),
+            ))
+            fig_b.update_layout(**BASE, height=max(180, len(pc)*45),
+                                margin=dict(t=10,b=20,l=10,r=50))
+            st.plotly_chart(fig_b, use_container_width=True)
+
+    # 유형 + 처리현황
     c3, c4 = st.columns(2)
-
     with c3:
-        if "유형" in f.columns:
-            with st.container(border=True):
-                st.markdown("**불량 유형별 접수**")
-                st.caption("유형 분류 기준 · 수량 합계")
+        with st.container(border=True):
+            st.markdown("**유형별 접수 현황**")
+            if "유형" in f.columns:
                 tc = f.groupby("유형")["수량"].sum().reset_index().sort_values("수량", ascending=False)
                 if not tc.empty:
                     fig3 = go.Figure(go.Bar(
                         x=tc["유형"], y=tc["수량"],
-                        marker=dict(color=C_PURPLE, opacity=0.85),
-                        text=tc["수량"], textposition="outside",
-                        textfont=dict(size=12, color="#1a1f36")
+                        marker=dict(color=[PALETTE[i % len(PALETTE)][0] for i in range(len(tc))]),
+                        text=tc["수량"], textposition="outside", textfont=dict(size=12),
                     ))
-                    fig3.update_layout(**BASE_LAYOUT, height=250)
+                    fig3.update_layout(**BASE, height=250, margin=dict(t=10,b=30,l=40,r=10))
                     st.plotly_chart(fig3, use_container_width=True)
 
     with c4:
         with st.container(border=True):
             st.markdown("**처리 현황**")
-            st.caption("완료 vs 진행중 비율")
             sv = f["상태"].value_counts().reset_index()
-            sv.columns = ["상태", "건수"]
+            sv.columns = ["상태","건수"]
             if not sv.empty:
-                colors = [C_GREEN if s == "완료" else C_YELLOW for s in sv["상태"]]
+                cs = ["#34a853" if s=="완료" else "#fbbc04" for s in sv["상태"]]
                 fig4 = go.Figure(go.Pie(
-                    labels=sv["상태"], values=sv["건수"],
-                    hole=0.58,
-                    marker=dict(colors=colors, line=dict(color="white", width=2)),
-                    textinfo="label+percent",
-                    textfont=dict(size=12),
+                    labels=sv["상태"], values=sv["건수"], hole=0.58,
+                    marker=dict(colors=cs, line=dict(color="white", width=2)),
+                    textinfo="label+percent", textfont=dict(size=12),
                 ))
                 fig4.update_layout(
-                    height=250,
-                    paper_bgcolor="white",
-                    margin=dict(t=10, b=10, l=10, r=10),
-                    font=FONT,
-                    showlegend=False,
-                    annotations=[dict(
-                        text=f"<b>{done_pct}%</b><br>완료",
-                        x=0.5, y=0.5, showarrow=False,
-                        font=dict(size=15, family="Noto Sans KR, Malgun Gothic, sans-serif")
-                    )]
+                    height=250, paper_bgcolor="white", font=FONT,
+                    margin=dict(t=10,b=10,l=10,r=10), showlegend=False,
+                    annotations=[dict(text=f"<b>{done_pct}%</b><br>완료",
+                                      x=0.5, y=0.5, showarrow=False,
+                                      font=dict(size=15, family="Noto Sans KR, Malgun Gothic, sans-serif"))]
                 )
                 st.plotly_chart(fig4, use_container_width=True)
 
 
-# TAB 2
+# ═══ TAB 2: 제품별 분석 ═════════════════════════════════════════════════════
 with tab2:
-    if "유형" in f.columns:
-        type_list = sorted(f["유형"].dropna().unique().tolist())
-        t_tabs = st.tabs(["전체"] + type_list)
+    prod_all = sorted(f["제품명"].dropna().unique().tolist())
+    if not prod_all:
+        st.info("필터에 맞는 제품 데이터가 없습니다.")
+    else:
+        sel_prod = st.radio("제품 선택", prod_all, horizontal=True)
+        pd_data  = f[f["제품명"] == sel_prod]
+        st.divider()
 
-        def type_view(data, label="전체"):
-            if data.empty:
-                st.info("데이터 없음")
-                return
-            a, b, c = st.columns(3)
-            a.metric("건수", f"{len(data)}")
-            b.metric("제품 종류", f"{data['제품명'].nunique()}")
-            c.metric("완료율", f"{round(len(data[data['상태']=='완료'])/len(data)*100,1)}%")
-            pd_ = data.groupby("제품명")["수량"].sum().reset_index().sort_values("수량", ascending=True)
-            fig = go.Figure(go.Bar(
-                y=pd_["제품명"], x=pd_["수량"], orientation="h",
-                marker=dict(color=C_BLUE, opacity=0.85),
-                text=pd_["수량"], textposition="outside",
-                textfont=dict(size=14, color="#1a1f36")
+        # 월별 총합 추이
+        with st.container(border=True):
+            st.markdown(f"**{sel_prod} — 월별 접수 추이 (총합)**")
+            clr, fill = PALETTE[prod_all.index(sel_prod) % len(PALETTE)]
+            mo = pd_data.groupby("월")["수량"].sum().reindex(all_months, fill_value=0)
+            fig_p = go.Figure(go.Scatter(
+                x=[f"{m}월" for m in mo.index], y=mo.values,
+                mode="lines+markers+text",
+                line=dict(color=clr, width=2.5),
+                marker=dict(size=8, color=clr, line=dict(width=2, color="white")),
+                fill="tozeroy", fillcolor=fill,
+                text=mo.values, textposition="top center", textfont=dict(size=10),
             ))
-            lo = {**BASE_LAYOUT, "height": 380, "margin": dict(t=30, b=30, l=10, r=60)}
-            fig.update_layout(**lo)
-            st.plotly_chart(fig, use_container_width=True, key=f"tc_{label}")
+            fig_p.update_layout(**BASE, height=240,
+                                margin=dict(t=10,b=30,l=40,r=10), showlegend=False)
+            st.plotly_chart(fig_p, use_container_width=True)
 
-        with t_tabs[0]:
-            type_view(f)
-        for i, t in enumerate(type_list):
-            with t_tabs[i + 1]:
-                type_view(f[f["유형"] == t], t)
+        # 접수 내용 (유형별)
+        if "유형" in pd_data.columns:
+            analysis_section(pd_data, "유형", f"{sel_prod} — 접수 내용 (유형별)", chart_fn="line")
+
+        # 원인 분석
+        if "원인" in pd_data.columns:
+            analysis_section(pd_data, "원인", f"{sel_prod} — 원인 분석", chart_fn="line")
+
+        # 처리 내역
+        if "처치" in pd_data.columns:
+            analysis_section(pd_data, "처치", f"{sel_prod} — 처리 내역", chart_fn="bar")
 
 
-# TAB 3
+# ═══ TAB 3: 유형·원인 분석 ══════════════════════════════════════════════════
 with tab3:
-    prod_list = sorted(f["제품명"].dropna().unique().tolist())
-    d_tabs = st.tabs(["전체"] + prod_list)
+    c1, c2 = st.columns(2)
+
+    with c1:
+        with st.container(border=True):
+            st.markdown("**유형별 월별 추이**")
+            st.caption("전체 제품 합산")
+            if "유형" in f.columns:
+                tm = f.dropna(subset=["월","유형"]).groupby(["유형","월"])["수량"].sum().reset_index()
+                fig_t = go.Figure()
+                for i, t in enumerate(sorted(tm["유형"].unique())):
+                    d = tm[tm["유형"]==t].sort_values("월")
+                    clr, _ = PALETTE[i % len(PALETTE)]
+                    fig_t.add_trace(go.Scatter(
+                        x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
+                        name=t, mode="lines+markers",
+                        line=dict(color=clr, width=2),
+                        marker=dict(size=6, color=clr),
+                    ))
+                fig_t.update_layout(**BASE, height=320,
+                                    margin=dict(t=10,b=30,l=40,r=10),
+                                    legend=dict(orientation="h",y=1.15,x=0,font=dict(size=10)))
+                st.plotly_chart(fig_t, use_container_width=True)
+
+    with c2:
+        with st.container(border=True):
+            st.markdown("**원인별 월별 추이**")
+            st.caption("전체 제품 합산")
+            if "원인" in f.columns:
+                cm = f[f["원인"].astype(str).str.strip() != ""].dropna(subset=["월"])
+                cm = cm.groupby(["원인","월"])["수량"].sum().reset_index()
+                fig_c = go.Figure()
+                for i, c in enumerate(sorted(cm["원인"].unique())):
+                    d = cm[cm["원인"]==c].sort_values("월")
+                    clr, _ = PALETTE[i % len(PALETTE)]
+                    fig_c.add_trace(go.Scatter(
+                        x=d["월"].astype(int).map(lambda m: f"{m}월"), y=d["수량"],
+                        name=c, mode="lines+markers",
+                        line=dict(color=clr, width=2),
+                        marker=dict(size=6, color=clr),
+                    ))
+                fig_c.update_layout(**BASE, height=320,
+                                    margin=dict(t=10,b=30,l=40,r=10),
+                                    legend=dict(orientation="h",y=1.15,x=0,font=dict(size=10)))
+                st.plotly_chart(fig_c, use_container_width=True)
+
+    c3, c4 = st.columns(2)
+    with c3:
+        with st.container(border=True):
+            st.markdown("**유형별 비율**")
+            if "유형" in f.columns:
+                type_tot = f.groupby("유형")["수량"].sum().reset_index()
+                if not type_tot.empty:
+                    fig_tp = go.Figure(go.Pie(
+                        labels=type_tot["유형"], values=type_tot["수량"], hole=0.5,
+                        marker=dict(colors=[PALETTE[i % len(PALETTE)][0] for i in range(len(type_tot))],
+                                    line=dict(color="white", width=2)),
+                        textinfo="label+percent", textfont=dict(size=11),
+                    ))
+                    fig_tp.update_layout(height=250, paper_bgcolor="white",
+                                         margin=dict(t=10,b=10,l=10,r=10),
+                                         showlegend=False, font=FONT)
+                    st.plotly_chart(fig_tp, use_container_width=True)
+
+    with c4:
+        with st.container(border=True):
+            st.markdown("**원인별 비율**")
+            if "원인" in f.columns:
+                cause_tot = f[f["원인"].astype(str).str.strip() != ""].groupby("원인")["수량"].sum().reset_index()
+                if not cause_tot.empty:
+                    fig_cp = go.Figure(go.Pie(
+                        labels=cause_tot["원인"], values=cause_tot["수량"], hole=0.5,
+                        marker=dict(colors=[PALETTE[i % len(PALETTE)][0] for i in range(len(cause_tot))],
+                                    line=dict(color="white", width=2)),
+                        textinfo="label+percent", textfont=dict(size=11),
+                    ))
+                    fig_cp.update_layout(height=250, paper_bgcolor="white",
+                                         margin=dict(t=10,b=10,l=10,r=10),
+                                         showlegend=False, font=FONT)
+                    st.plotly_chart(fig_cp, use_container_width=True)
+
+
+# ═══ TAB 4: 상세목록 ════════════════════════════════════════════════════════
+with tab4:
     dcols = [c for c in ["순번","접수일자","HA번호","업체명","제품명","시리얼",
-                          "유형","증상","상태","완료일자"] if c in f.columns]
+                          "유형","증상","원인","처치","상태","완료일자"] if c in f.columns]
 
     def render_table(data):
         if data.empty:
             st.info("데이터 없음")
             return
-        if "유형" in data.columns:
-            vc = data["유형"].value_counts()
-            sc = st.columns(min(len(vc), 6))
-            for i, (k, v) in enumerate(vc.items()):
-                if i < len(sc):
-                    sc[i].metric(k, f"{v}건")
         d = data[dcols].copy()
         d["_dup"] = d["시리얼"].isin(dup_sns.index)
-        for col in ["접수일자", "완료일자"]:
+        for col in ["접수일자","완료일자"]:
             if col in d.columns:
                 d[col] = pd.to_datetime(d[col], errors="coerce").dt.strftime("%Y-%m-%d").fillna("")
         def hl(row):
-            if row.get("_dup"):
-                return ["background-color:#fff5f5"] * len(row)
-            if row.get("상태") == "진행중":
-                return ["background-color:#fffbf0"] * len(row)
+            if row.get("_dup"): return ["background-color:#fff5f5"] * len(row)
+            if row.get("상태") == "진행중": return ["background-color:#fffbf0"] * len(row)
             return [""] * len(row)
         st.dataframe(d.drop(columns=["_dup"]).style.apply(hl, axis=1),
                      use_container_width=True, height=420)
 
+    prod_list_d = sorted(f["제품명"].dropna().unique().tolist())
+    d_tabs = st.tabs(["전체"] + prod_list_d)
+
     with d_tabs[0]:
+        if "유형" in f.columns:
+            vc = f["유형"].value_counts()
+            sc = st.columns(min(len(vc), 6))
+            for i, (k, v) in enumerate(vc.items()):
+                if i < len(sc): sc[i].metric(k, f"{v}건")
         render_table(f)
-    for i, prod in enumerate(prod_list):
-        with d_tabs[i + 1]:
+
+    for i, prod in enumerate(prod_list_d):
+        with d_tabs[i+1]:
             pdata = f[f["제품명"] == prod]
-            st.caption(f"{prod} — {len(pdata)}건")
+            st.caption(f"{prod} — 총 {len(pdata)}건")
             render_table(pdata)
 
 
-# TAB 4
-with tab4:
+# ═══ TAB 5: 중복 S/N ════════════════════════════════════════════════════════
+with tab5:
     if dup_cnt == 0:
         st.success("중복 접수된 S/N이 없습니다.")
     else:
