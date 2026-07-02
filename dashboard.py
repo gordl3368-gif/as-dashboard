@@ -284,9 +284,8 @@ with tab1:
                 ))
             fig1.update_layout(**BASE, height=300,
                                margin=dict(t=10,b=30,l=40,r=10),
-                               legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)),
-                               xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
-                                          categoryorder="array", categoryarray=x_labels))
+                               legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)))
+            fig1.update_xaxes(categoryorder="array", categoryarray=x_labels)
             st.plotly_chart(fig1, use_container_width=True)
 
     with c2:
@@ -381,10 +380,9 @@ with tab2:
                 text=mo.values, textposition="top center", textfont=dict(size=10),
             ))
             fig_p.update_layout(**BASE, height=240,
-                                margin=dict(t=10,b=30,l=40,r=10), showlegend=False,
-                                xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
-                                           categoryorder="array",
-                                           categoryarray=[f"{m}월" for m in all_months]))
+                                margin=dict(t=10,b=30,l=40,r=10), showlegend=False)
+            fig_p.update_xaxes(categoryorder="array",
+                               categoryarray=[f"{m}월" for m in all_months])
             st.plotly_chart(fig_p, use_container_width=True)
 
         # 접수 내용 (유형별)
@@ -420,9 +418,8 @@ with tab3:
                 ))
             fig_t.update_layout(**BASE, height=320,
                                 margin=dict(t=10,b=30,l=40,r=10),
-                                legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)),
-                                xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
-                                           categoryorder="array", categoryarray=x_labels))
+                                legend=dict(orientation="h",y=1.12,x=0,font=dict(size=11)))
+            fig_t.update_xaxes(categoryorder="array", categoryarray=x_labels)
             st.plotly_chart(fig_t, use_container_width=True)
 
     c3, c4 = st.columns(2)
