@@ -61,7 +61,7 @@ def load_data():
         if len(all_rows) < 5:
             return None, "데이터가 없습니다."
         col_map = {
-            0:"순번", 1:"접수일자", 3:"HA번호", 4:"제품명", 5:"시리얼",
+            0:"순번", 1:"접수일자", 2:"입고일자", 3:"HA번호", 4:"제품명", 5:"시리얼",
             6:"수량", 7:"업체명", 11:"증상", 12:"유형", 14:"완료일자", 16:"원인", 17:"처치",
         }
         n_cols = max(col_map.keys()) + 1
@@ -72,7 +72,7 @@ def load_data():
         df = df[df["시리얼"].astype(str).str.strip() != ""]
         if "유형" in df.columns:
             df = df[~df["유형"].astype(str).str.contains("세부내용|유형|항목", na=False)]
-        for col in ["접수일자", "완료일자"]:
+        for col in ["접수일자", "입고일자", "완료일자"]:
             df[col] = pd.to_datetime(df[col], errors="coerce")
         df["수량"] = pd.to_numeric(df["수량"], errors="coerce").fillna(1)
         df["상태"] = df["완료일자"].apply(lambda x: "완료" if pd.notna(x) else "진행중")
@@ -82,7 +82,7 @@ def load_data():
                 return mm if 1 <= mm <= 12 else None
             except:
                 return None
-        df["월"] = df["HA번호"].apply(exm) if "HA번호" in df.columns else df["접수일자"].dt.month
+        df["월"] = df["입고일자"].dt.month.where(df["입고일자"].notna(), df["접수일자"].dt.month)
         if "처치" in df.columns:
             df["처치_분류"] = df["처치"].apply(_map_treatment)
         return df, None
@@ -209,8 +209,8 @@ _this_week_start = _today_dt - datetime.timedelta(days=_today_dt.weekday())
 _last_week_start = _this_week_start - datetime.timedelta(weeks=1)
 _last_week_end   = _this_week_start - datetime.timedelta(days=1)
 
-_df_dated = df[df["접수일자"].notna()].copy()
-_df_dated["_date"] = _df_dated["접수일자"].dt.date
+_df_dated = df[df["입고일자"].notna()].copy()
+_df_dated["_date"] = _df_dated["입고일자"].dt.date
 
 _this_w = _df_dated[_df_dated["_date"] >= _this_week_start]
 _last_w = _df_dated[(_df_dated["_date"] >= _last_week_start) & (_df_dated["_date"] <= _last_week_end)]
