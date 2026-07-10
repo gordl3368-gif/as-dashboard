@@ -59,19 +59,19 @@ SCORE = {s: i+1 for i, s in enumerate(OPTS)}
 
 with st.form("survey"):
     st.markdown("**1. 전체 만족도**")
-    q1 = st.radio("전체만족도", OPTS, index=4, horizontal=True, label_visibility="collapsed")
+    q1 = st.radio("전체만족도", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
     st.markdown("**2. 접수 편의성** — 접수 과정이 불편하진 않으셨나요?")
-    q2 = st.radio("접수편의성", OPTS, index=4, horizontal=True, label_visibility="collapsed")
+    q2 = st.radio("접수편의성", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
     st.markdown("**3. 담당자 응대** — 담당자가 친절하고 전문적이었나요?")
-    q3 = st.radio("담당자응대", OPTS, index=4, horizontal=True, label_visibility="collapsed")
+    q3 = st.radio("담당자응대", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
     st.markdown("**4. 수리 기간** — 수리 처리 속도는 어떠셨나요?")
-    q4 = st.radio("수리기간", ["빠름", "보통", "느림"], index=0, horizontal=True, label_visibility="collapsed")
+    q4 = st.radio("수리기간", ["빠름", "보통", "느림"], index=1, horizontal=True, label_visibility="collapsed")
 
     st.markdown("**5. 안내 및 소통** — 진행 상황을 잘 안내받으셨나요?")
-    q5 = st.radio("안내및소통", OPTS, index=4, horizontal=True, label_visibility="collapsed")
+    q5 = st.radio("안내및소통", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
     submitted = st.form_submit_button("제출하기", use_container_width=True, type="primary")
