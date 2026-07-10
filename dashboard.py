@@ -8,6 +8,7 @@ import os
 
 SPREADSHEET_ID = "1tsdHzv1l__d63BQpTf6yFnxRn22KhpCwo7HJG61oYwg"
 GS_SHEET_NAME  = "고객자산관리대장"
+SURVEY_SHEET   = "만족도평가"
 SA_PATH        = r"C:\Users\user\AS자동화\보고서발송\service_account.json"
 
 import base64 as _b64
@@ -242,7 +243,7 @@ with k5: st.metric("중복 S/N", f"{dup_cnt}건",
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도"])
 
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
@@ -678,6 +679,7 @@ with tab4:
 
 # ═══ TAB 5: 중복 S/N ════════════════════════════════════════════════════════
 with tab5:
+
     if dup_cnt == 0:
         st.success("중복 접수된 S/N이 없습니다.")
     else:
@@ -697,3 +699,115 @@ with tab5:
             with st.expander(f"🔴 {sn}  |  {prod}  |  총 {cnt}회 접수"):
                 st.dataframe(rows.drop(columns=["접수횟수"]).reset_index(drop=True),
                              use_container_width=True, hide_index=True)
+
+
+# ═══ TAB 6: 만족도 ══════════════════════════════════════════════════════════
+with tab6:
+    @st.cache_data(ttl=60)
+    def load_survey():
+        try:
+            client = _get_gspread_client()
+            sh = client.open_by_key(SPREADSHEET_ID)
+            ws = sh.worksheet(SURVEY_SHEET)
+            rows = ws.get_all_values()
+            if len(rows) < 2:
+                return None
+            sdf = pd.DataFrame(rows[1:], columns=rows[0])
+            for c in ["전체만족도","접수편의성","담당자응대","안내및소통"]:
+                if c in sdf.columns:
+                    sdf[c] = pd.to_numeric(sdf[c], errors="coerce")
+            sdf["제출일시"] = pd.to_datetime(sdf["제출일시"], errors="coerce")
+            return sdf
+        except Exception:
+            return None
+
+    sdf = load_survey()
+
+    if sdf is None or sdf.empty:
+        st.info("아직 만족도 평가 데이터가 없습니다. 보고서 발송 이메일의 링크를 통해 수집됩니다.")
+    else:
+        total = len(sdf)
+        score_cols = ["전체만족도","접수편의성","담당자응대","안내및소통"]
+        avgs = {c: round(sdf[c].mean(), 2) for c in score_cols if c in sdf.columns}
+
+        # KPI
+        kc = st.columns(len(avgs) + 1)
+        kc[0].metric("총 응답 수", f"{total}건")
+        for i, (label, val) in enumerate(avgs.items()):
+            kc[i+1].metric(label, f"{val} / 5")
+
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+        c_left, c_right = st.columns(2)
+
+        # 항목별 평균 가로 막대
+        with c_left:
+            with st.container(border=True):
+                st.markdown("**항목별 평균 점수**")
+                fig_avg = go.Figure(go.Bar(
+                    y=list(avgs.keys()),
+                    x=list(avgs.values()),
+                    orientation="h",
+                    marker=dict(color="#F36C21", opacity=0.85),
+                    text=[f"{v}점" for v in avgs.values()],
+                    textposition="outside",
+                    textfont=dict(size=12),
+                ))
+                fig_avg.update_layout(
+                    plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                    height=220, margin=dict(t=10, b=10, l=10, r=60),
+                    xaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
+                    yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_avg, use_container_width=True)
+
+        # 수리기간 분포
+        with c_right:
+            with st.container(border=True):
+                st.markdown("**수리 기간 평가 분포**")
+                if "수리기간" in sdf.columns:
+                    sp = sdf["수리기간"].value_counts().reindex(["빠름","보통","느림"], fill_value=0)
+                    fig_sp = go.Figure(go.Pie(
+                        labels=sp.index, values=sp.values, hole=0.5,
+                        marker=dict(colors=["#34a853","#fbbc04","#ea4335"],
+                                    line=dict(color="white", width=2)),
+                        textinfo="label+percent", textfont=dict(size=12),
+                    ))
+                    fig_sp.update_layout(
+                        height=220, paper_bgcolor="white", font=FONT,
+                        margin=dict(t=10, b=10, l=10, r=10), showlegend=False,
+                    )
+                    st.plotly_chart(fig_sp, use_container_width=True)
+
+        # 전체만족도 추이
+        with st.container(border=True):
+            st.markdown("**전체 만족도 추이**")
+            trend = sdf.dropna(subset=["제출일시","전체만족도"]).copy()
+            trend = trend.sort_values("제출일시")
+            if not trend.empty:
+                fig_tr = go.Figure(go.Scatter(
+                    x=trend["제출일시"],
+                    y=trend["전체만족도"],
+                    mode="lines+markers",
+                    line=dict(color="#F36C21", width=2),
+                    marker=dict(size=8, color="#F36C21", line=dict(width=2, color="white")),
+                    fill="tozeroy", fillcolor="rgba(243,108,33,0.08)",
+                ))
+                fig_tr.update_layout(
+                    plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                    height=220, margin=dict(t=10, b=30, l=40, r=10),
+                    yaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False),
+                    xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_tr, use_container_width=True)
+
+        # 최근 응답 목록
+        with st.container(border=True):
+            st.markdown("**최근 응답 목록**")
+            show_cols = [c for c in ["제출일시","업체명","시리얼","전체만족도",
+                                      "접수편의성","담당자응대","수리기간","안내및소통"] if c in sdf.columns]
+            recent = sdf[show_cols].sort_values("제출일시", ascending=False).head(20).copy()
+            recent["제출일시"] = recent["제출일시"].dt.strftime("%Y-%m-%d %H:%M")
+            st.dataframe(recent, use_container_width=True, hide_index=True, height=300)
