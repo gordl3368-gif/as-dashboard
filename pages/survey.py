@@ -39,7 +39,7 @@ if os.path.exists(_logo_path):
 # ── 헤더 ──────────────────────────────────────────────────────────────────────
 _logo_tag = f'<img src="data:image/png;base64,{_logo_b64}" style="height:56px;filter:brightness(0) invert(1);">' if _logo_b64 else ""
 st.markdown(f"""
-<div style="background:#F36C21;padding:24px 28px;border-radius:12px;margin-bottom:24px;">
+<div style="background:#C45D31;padding:24px 28px;border-radius:12px;margin-bottom:24px;">
   <div style="display:flex;align-items:center;gap:20px;">
     {_logo_tag}
     <div style="border-left:2px solid rgba(255,255,255,0.5);padding-left:20px;">
