@@ -4,6 +4,7 @@ from google.oauth2 import service_account
 import gspread
 import datetime
 import os
+import base64
 
 SPREADSHEET_ID = "1tsdHzv1l__d63BQpTf6yFnxRn22KhpCwo7HJG61oYwg"
 SURVEY_SHEET   = "만족도평가"
@@ -28,11 +29,24 @@ seq     = params.get("seq", "")
 company = params.get("company", "")
 serial  = params.get("serial", "")
 
+# ── 로고 Base64 인코딩 ────────────────────────────────────────────────────────
+_logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logo.png")
+_logo_b64 = ""
+if os.path.exists(_logo_path):
+    with open(_logo_path, "rb") as f:
+        _logo_b64 = base64.b64encode(f.read()).decode()
+
 # ── 헤더 ──────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div style="background:#F36C21;padding:22px 28px;border-radius:12px;margin-bottom:24px;">
-  <div style="color:white;font-size:20px;font-weight:700;letter-spacing:-0.3px;">㈜시지바이오 A/S센터</div>
-  <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:4px;">A/S 서비스 만족도 평가</div>
+_logo_tag = f'<img src="data:image/png;base64,{_logo_b64}" style="height:36px;filter:brightness(0) invert(1);margin-right:16px;vertical-align:middle;">' if _logo_b64 else ""
+st.markdown(f"""
+<div style="background:#F36C21;padding:22px 28px;border-radius:12px;margin-bottom:24px;display:flex;align-items:center;">
+  <div style="display:flex;align-items:center;flex:1;">
+    {_logo_tag}
+    <div>
+      <div style="color:white;font-size:20px;font-weight:700;letter-spacing:-0.3px;">시지바이오 A/S센터</div>
+      <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:4px;">A/S 서비스 만족도 평가</div>
+    </div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
