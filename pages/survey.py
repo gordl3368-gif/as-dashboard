@@ -40,8 +40,8 @@ if os.path.exists(_logo_path):
 _logo_tag = f'<img src="data:image/png;base64,{_logo_b64}" style="height:56px;filter:brightness(0) invert(1);">' if _logo_b64 else ""
 st.markdown(f"""
 <div style="background:#C45D31;padding:24px 28px;border-radius:12px;margin-bottom:24px;">
-  <div style="display:flex;align-items:center;gap:20px;">
-    {_logo_tag}
+  <div style="display:flex;align-items:center;gap:20px;justify-content:flex-start;">
+    <div style="flex:0 0 auto;">{_logo_tag}</div>
     <div style="border-left:2px solid rgba(255,255,255,0.5);padding-left:20px;">
       <div style="color:white;font-size:20px;font-weight:700;letter-spacing:-0.3px;line-height:1.3;">시지바이오 A/S센터</div>
       <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:4px;">A/S 서비스 만족도 평가</div>
