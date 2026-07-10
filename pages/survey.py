@@ -37,7 +37,7 @@ if os.path.exists(_logo_path):
         _logo_b64 = base64.b64encode(f.read()).decode()
 
 # ── 헤더 ──────────────────────────────────────────────────────────────────────
-_logo_tag = f'<img src="data:image/png;base64,{_logo_b64}" style="height:56px;filter:brightness(0) invert(1);">' if _logo_b64 else ""
+_logo_tag = f'<img src="data:image/png;base64,{_logo_b64}" style="height:80px;filter:brightness(0) invert(1);">' if _logo_b64 else ""
 st.markdown(f"""
 <div style="background:#C45D31;padding:24px 28px;border-radius:12px;margin-bottom:24px;">
   <div style="display:flex;align-items:center;gap:20px;justify-content:flex-start;">
