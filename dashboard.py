@@ -39,7 +39,7 @@ header[data-testid="stHeader"]{display:none!important;}
 .block-container{padding-top:0!important;padding-left:1.2rem!important;padding-right:1.2rem!important;max-width:100%!important;}
 [data-testid="metric-container"]{background:#ffffff;border:1px solid #e8ecf4;border-radius:10px;padding:14px 18px!important;}
 [data-testid="stMetricLabel"]>div{font-size:11px!important;color:#9ca3af!important;}
-[data-testid="stMetricValue"]>div{font-size:28px!important;font-weight:700!important;}
+[data-testid="stMetricValue"]>div{font-size:28px!important;font-weight:700!important;color:#C45D31!important;}
 </style>""", unsafe_allow_html=True)
 
 
@@ -116,14 +116,14 @@ cur_m  = today.month
 prev_m = cur_m - 1 if cur_m > 1 else 12
 
 
-# Color palette
+# Color palette (CGBIO 브랜드 컬러 기준)
 PALETTE = [
-    ("#1a73e8", "rgba(26,115,232,0.1)"),
+    ("#C45D31", "rgba(196,93,49,0.1)"),
     ("#ea4335", "rgba(234,67,53,0.1)"),
     ("#34a853", "rgba(52,168,83,0.1)"),
     ("#fbbc04", "rgba(251,188,4,0.1)"),
     ("#9334e6", "rgba(147,52,230,0.1)"),
-    ("#ff6d00", "rgba(255,109,0,0.1)"),
+    ("#1a73e8", "rgba(26,115,232,0.1)"),
     ("#00bcd4", "rgba(0,188,212,0.1)"),
 ]
 FONT = dict(family="Noto Sans KR, Malgun Gothic, sans-serif", size=12)
@@ -148,7 +148,7 @@ st.markdown(f"""
   </div>
   <div style="width:1px;background:#e0e4ef;flex-shrink:0;"></div>
   <div style="padding:12px 22px;display:flex;flex-direction:column;justify-content:center;">
-    <div style="font-size:17px;font-weight:600;color:#1a1f36;letter-spacing:-.2px;">큐라시스 A/S 센터 현황</div>
+    <div style="font-size:17px;font-weight:600;color:#1a1f36;letter-spacing:-.2px;">시지바이오 A/S 센터 현황</div>
     <div style="font-size:11px;color:#9ca3af;margin-top:4px;">A/S 접수 · 처리현황 · 원인분석 · 처리내역 &nbsp;|&nbsp; Google Sheets 실시간 연동</div>
   </div>
   <div style="margin-left:auto;padding:12px 22px;display:flex;align-items:center;gap:20px;flex-shrink:0;">
@@ -204,6 +204,10 @@ done_cnt  = len(f[f["상태"] == "완료"])
 prog_cnt  = total_cnt - done_cnt
 done_pct  = round(done_cnt / total_cnt * 100, 1) if total_cnt else 0
 
+_completed = f[f["상태"] == "완료"].copy()
+_completed["처리일수"] = (_completed["완료일자"] - _completed["접수일자"]).dt.days
+avg_days = round(_completed["처리일수"].dropna().mean(), 1) if not _completed.empty else 0
+
 # Weekly stats
 _today_dt        = datetime.date.today()
 _this_week_start = _today_dt - datetime.timedelta(days=_today_dt.weekday())
@@ -231,12 +235,13 @@ for _i in range(7, -1, -1):
 _weeks_df = pd.DataFrame(_weeks_rows)
 
 # KPI
-k1, k2, k3, k4, k5 = st.columns(5)
+k1, k2, k3, k4, k5, k6 = st.columns(6)
 with k1: st.metric(f"이번달 접수 ({cur_m}월)", f"{cur_cnt}건", f"{delta:+d}건 전월비")
 with k2: st.metric(f"전월 접수 ({prev_m}월)", f"{prev_cnt}건", f"{prev_pct}% 완료율", delta_color="off")
 with k3: st.metric("처리 완료율", f"{done_pct}%", f"{done_cnt} / {total_cnt}건", delta_color="off")
 with k4: st.metric("진행중", f"{prog_cnt}건", "처리 대기 중", delta_color="off")
-with k5: st.metric("중복 S/N", f"{dup_cnt}건",
+with k5: st.metric("평균 처리 기간", f"{avg_days}일", "접수→완료 평균", delta_color="off")
+with k6: st.metric("중복 S/N", f"{dup_cnt}건",
                    "⚠ 재접수 주의" if dup_cnt else "이상 없음",
                    delta_color="inverse" if dup_cnt else "off")
 
@@ -723,6 +728,13 @@ with tab6:
 
     sdf = load_survey()
 
+    SURVEY_LABELS = {
+        "전체만족도": "전반적인 서비스 만족도",
+        "접수편의성": "접수 과정 편의성",
+        "담당자응대": "담당자 응대",
+        "안내및소통": "진행 안내 및 소통",
+    }
+
     if sdf is None or sdf.empty:
         st.info("아직 만족도 평가 데이터가 없습니다. 보고서 발송 이메일의 링크를 통해 수집됩니다.")
     else:
@@ -733,8 +745,8 @@ with tab6:
         # KPI
         kc = st.columns(len(avgs) + 1)
         kc[0].metric("총 응답 수", f"{total}건")
-        for i, (label, val) in enumerate(avgs.items()):
-            kc[i+1].metric(label, f"{val} / 5")
+        for i, (col, val) in enumerate(avgs.items()):
+            kc[i+1].metric(SURVEY_LABELS.get(col, col), f"{val} / 5")
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -745,7 +757,7 @@ with tab6:
             with st.container(border=True):
                 st.markdown("**항목별 평균 점수**")
                 fig_avg = go.Figure(go.Bar(
-                    y=list(avgs.keys()),
+                    y=[SURVEY_LABELS.get(k, k) for k in avgs.keys()],
                     x=list(avgs.values()),
                     orientation="h",
                     marker=dict(color="#F36C21", opacity=0.85),
@@ -755,7 +767,7 @@ with tab6:
                 ))
                 fig_avg.update_layout(
                     plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                    height=220, margin=dict(t=10, b=10, l=10, r=60),
+                    height=240, margin=dict(t=10, b=10, l=10, r=60),
                     xaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
                     yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
                     showlegend=False,
