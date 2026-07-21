@@ -72,19 +72,19 @@ OPTS  = ["매우 불만족", "불만족", "보통", "만족", "매우 만족"]
 SCORE = {s: i+1 for i, s in enumerate(OPTS)}
 
 with st.form("survey"):
-    st.markdown("**1. 전체 만족도**")
+    st.markdown("**1. 전반적인 A/S 서비스에 만족하셨습니까?**")
     q1 = st.radio("전체만족도", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
-    st.markdown("**2. 접수 편의성** — 접수 과정이 불편하진 않으셨나요?")
+    st.markdown("**2. 접수 과정이 불편함 없이 진행되었습니까?**")
     q2 = st.radio("접수편의성", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
-    st.markdown("**3. 담당자 응대** — 담당자가 친절하고 전문적이었나요?")
+    st.markdown("**3. 담당자의 응대가 친절하고 전문적이었습니까?**")
     q3 = st.radio("담당자응대", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
-    st.markdown("**4. 수리 기간** — 수리 처리 속도는 어떠셨나요?")
+    st.markdown("**4. 안내받은 수리 기간 내에 처리가 완료되었습니까?**")
     q4 = st.radio("수리기간", ["빠름", "보통", "느림"], index=1, horizontal=True, label_visibility="collapsed")
 
-    st.markdown("**5. 안내 및 소통** — 진행 상황을 잘 안내받으셨나요?")
+    st.markdown("**5. A/S 진행 상황이 충분히 안내되었습니까?**")
     q5 = st.radio("안내및소통", OPTS, index=2, horizontal=True, label_visibility="collapsed")
 
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
