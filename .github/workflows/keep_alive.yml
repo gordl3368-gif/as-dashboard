@@ -1,0 +1,34 @@
+name: Keep Streamlit Alive
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # 30분마다 실행
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Visit Streamlit app
+        run: |
+          pip install playwright -q
+          playwright install chromium --with-deps -q
+          python - <<'EOF'
+          from playwright.sync_api import sync_playwright
+          urls = [
+            "https://as-dashboard-umlmnwqizgdf5tkjtc9dm3.streamlit.app",
+            "https://as-dashboard-umlmnwqizgdf5tkjtc9dm3.streamlit.app/survey",
+          ]
+          with sync_playwright() as p:
+              browser = p.chromium.launch()
+              for url in urls:
+                  try:
+                      page = browser.new_page()
+                      page.goto(url, timeout=60000)
+                      page.wait_for_timeout(8000)
+                      print(f"OK: {url}")
+                      page.close()
+                  except Exception as e:
+                      print(f"FAIL: {url} - {e}")
+              browser.close()
+          EOF
