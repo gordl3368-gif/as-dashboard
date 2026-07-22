@@ -560,7 +560,7 @@ with tab2:
                 line=dict(color=clr, width=2.5),
                 marker=dict(size=8, color=clr, line=dict(width=2, color="white")),
                 fill="tozeroy", fillcolor=fill,
-                text=mo.values, textposition="top center", textfont=dict(size=10),
+                text=mo.values, textposition="bottom center", textfont=dict(size=10, color="#1a1f36"),
             ))
             fig_p.update_layout(**BASE, height=240,
                                 margin=dict(t=50,b=30,l=40,r=10), showlegend=False)
