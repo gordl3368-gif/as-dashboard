@@ -560,10 +560,11 @@ with tab2:
                 line=dict(color=clr, width=2.5),
                 marker=dict(size=8, color=clr, line=dict(width=2, color="white")),
                 fill="tozeroy", fillcolor=fill,
-                text=mo.values, textposition="bottom center", textfont=dict(size=10, color="#1a1f36"),
+                text=mo.values, textposition="top center", textfont=dict(size=10, color="#1a1f36"),
+                cliponaxis=False,
             ))
             fig_p.update_layout(**BASE, height=240,
-                                margin=dict(t=50,b=30,l=40,r=10), showlegend=False)
+                                margin=dict(t=50,b=30,l=60,r=20), showlegend=False)
             fig_p.update_xaxes(categoryorder="array",
                                categoryarray=[f"{m}월" for m in all_months])
             fig_p.update_yaxes(range=[0, mo.max() * 1.45], rangemode="normal")
