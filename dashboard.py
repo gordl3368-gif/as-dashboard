@@ -606,19 +606,27 @@ with tab2:
                                               showlegend=False, font=FONT)
                         st.plotly_chart(fig_tr2, use_container_width=True)
 
-        # 접수 내용 (유형별)
+        # 유형별 월별 상세 수치
         if "유형" in pd_data.columns:
-            analysis_section(pd_data, "유형", f"{sel_prod} — 접수 내용 (유형별)", chart_fn="line")
+            with st.expander("📋 유형별 월별 상세 수치", expanded=False):
+                pv = pivot_table(pd_data, "유형")
+                if not pv.empty:
+                    st.dataframe(pv, use_container_width=True,
+                                 height=min(105 + len(pv) * 36, 320))
 
         # 원인 분석
         if "원인" in pd_data.columns:
             with st.expander("🔍 원인 분석 상세 보기", expanded=False):
                 analysis_section(pd_data, "원인", f"{sel_prod} — 원인 분석", chart_fn="line")
 
-        # 처리 내역
+        # 처리 내역 월별 상세 수치
         if "처치_분류" in pd_data.columns:
-            exp = pd_data.explode("처치_분류").copy()
-            analysis_section(exp, "처치_분류", f"{sel_prod} — 처리 내역", chart_fn="bar")
+            with st.expander("📋 처리 내역 월별 상세 수치", expanded=False):
+                _exp3 = pd_data.explode("처치_분류").copy()
+                pv2 = pivot_table(_exp3, "처치_분류")
+                if not pv2.empty:
+                    st.dataframe(pv2, use_container_width=True,
+                                 height=min(105 + len(pv2) * 36, 320))
 
 
 # ═══ TAB 3: 유형·원인 분석 ══════════════════════════════════════════════════
