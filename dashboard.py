@@ -609,7 +609,7 @@ with tab3:
             fig_t.update_xaxes(categoryorder="array", categoryarray=x_labels)
             st.plotly_chart(fig_t, use_container_width=True)
 
-    c3, c4 = st.columns(2)
+    _, c3, _ = st.columns([1, 2, 1])
     with c3:
         with st.container(border=True):
             st.markdown("**유형별 비율**")
