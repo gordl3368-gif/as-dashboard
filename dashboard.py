@@ -570,6 +570,42 @@ with tab2:
             fig_p.update_yaxes(range=[0, mo.max() * 1.45], rangemode="normal")
             st.plotly_chart(fig_p, use_container_width=True)
 
+        # 유형별 비율 + 처리 내역 비율 파이차트
+        _pc1, _pc2 = st.columns(2)
+        with _pc1:
+            with st.container(border=True):
+                st.markdown(f"**{sel_prod} — 유형별 비율**")
+                if "유형" in pd_data.columns:
+                    _type_tot = pd_data[pd_data["유형"].astype(str).str.strip() != ""].groupby("유형")["수량"].sum().reset_index()
+                    if not _type_tot.empty:
+                        fig_tp2 = go.Figure(go.Pie(
+                            labels=_type_tot["유형"], values=_type_tot["수량"], hole=0.5,
+                            marker=dict(colors=[PALETTE[i % len(PALETTE)][0] for i in range(len(_type_tot))],
+                                        line=dict(color="white", width=2)),
+                            textinfo="label+percent", textfont=dict(size=11),
+                        ))
+                        fig_tp2.update_layout(height=260, paper_bgcolor="white",
+                                              margin=dict(t=10,b=10,l=10,r=10),
+                                              showlegend=False, font=FONT)
+                        st.plotly_chart(fig_tp2, use_container_width=True)
+        with _pc2:
+            with st.container(border=True):
+                st.markdown(f"**{sel_prod} — 처리 내역 비율**")
+                if "처치_분류" in pd_data.columns:
+                    _exp2 = pd_data.explode("처치_분류").copy()
+                    _treat_tot = _exp2[_exp2["처치_분류"].astype(str).str.strip() != ""].groupby("처치_분류")["수량"].sum().reset_index()
+                    if not _treat_tot.empty:
+                        fig_tr2 = go.Figure(go.Pie(
+                            labels=_treat_tot["처치_분류"], values=_treat_tot["수량"], hole=0.5,
+                            marker=dict(colors=[PALETTE[i % len(PALETTE)][0] for i in range(len(_treat_tot))],
+                                        line=dict(color="white", width=2)),
+                            textinfo="label+percent", textfont=dict(size=11),
+                        ))
+                        fig_tr2.update_layout(height=260, paper_bgcolor="white",
+                                              margin=dict(t=10,b=10,l=10,r=10),
+                                              showlegend=False, font=FONT)
+                        st.plotly_chart(fig_tr2, use_container_width=True)
+
         # 접수 내용 (유형별)
         if "유형" in pd_data.columns:
             analysis_section(pd_data, "유형", f"{sel_prod} — 접수 내용 (유형별)", chart_fn="line")
