@@ -576,7 +576,8 @@ with tab2:
 
         # 원인 분석
         if "원인" in pd_data.columns:
-            analysis_section(pd_data, "원인", f"{sel_prod} — 원인 분석", chart_fn="line")
+            with st.expander("🔍 원인 분석 상세 보기", expanded=False):
+                analysis_section(pd_data, "원인", f"{sel_prod} — 원인 분석", chart_fn="line")
 
         # 처리 내역
         if "처치_분류" in pd_data.columns:
@@ -626,7 +627,7 @@ with tab3:
                                          showlegend=False, font=FONT)
                     st.plotly_chart(fig_tp, use_container_width=True)
 
-    with c4:
+    with st.expander("🔍 원인 분석 상세 보기", expanded=False):
         with st.container(border=True):
             st.markdown("**원인별 비율**")
             if "원인" in f.columns:
