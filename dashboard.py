@@ -31,15 +31,107 @@ st.set_page_config(page_title="A/S 현황 대시보드", layout="wide", page_ico
 
 st.markdown("""<style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+
+/* ── 기본 폰트 ── */
 html,body,[class*="css"],.stApp{font-family:'Noto Sans KR','Malgun Gothic',sans-serif!important;}
+
+/* ── 숨김 처리 ── */
 #MainMenu{visibility:hidden;}
 footer{visibility:hidden;}
 .stDeployButton{visibility:hidden;}
 header[data-testid="stHeader"]{display:none!important;}
-.block-container{padding-top:0!important;padding-left:1.2rem!important;padding-right:1.2rem!important;max-width:100%!important;}
-[data-testid="metric-container"]{background:#ffffff;border:1px solid #e8ecf4;border-radius:10px;padding:14px 18px!important;}
-[data-testid="stMetricLabel"]>div{font-size:11px!important;color:#9ca3af!important;}
-[data-testid="stMetricValue"]>div{font-size:28px!important;font-weight:700!important;color:#C45D31!important;}
+
+/* ── 앱 배경 연한 회색 ── */
+.stApp{background:#f4f6f9!important;}
+section[data-testid="stSidebar"]{background:#ffffff!important;border-right:1px solid #e8ecf0!important;}
+
+/* ── 메인 컨텐츠 여백 ── */
+.block-container{padding-top:0!important;padding-left:1.4rem!important;padding-right:1.4rem!important;max-width:100%!important;}
+
+/* ── KPI 메트릭 카드 ── */
+[data-testid="metric-container"]{
+  background:#ffffff!important;
+  border:none!important;
+  border-radius:14px!important;
+  padding:18px 20px!important;
+  box-shadow:0 2px 10px rgba(0,0,0,0.07)!important;
+}
+[data-testid="stMetricLabel"]>div{font-size:11px!important;color:#9ca3af!important;letter-spacing:0.3px!important;}
+[data-testid="stMetricValue"]>div{font-size:26px!important;font-weight:700!important;color:#C45D31!important;}
+[data-testid="stMetricDelta"]>div{font-size:11px!important;}
+
+/* ── 컨테이너 카드 (border=True) ── */
+[data-testid="stVerticalBlockBorderWrapper"]{
+  background:#ffffff!important;
+  border:none!important;
+  border-radius:14px!important;
+  box-shadow:0 2px 10px rgba(0,0,0,0.06)!important;
+  padding:4px!important;
+}
+
+/* ── 탭 스타일 ── */
+.stTabs [data-baseweb="tab-list"]{
+  background:#e8ecf0!important;
+  border-radius:10px!important;
+  padding:4px!important;
+  gap:2px!important;
+  border-bottom:none!important;
+}
+.stTabs [data-baseweb="tab"]{
+  border-radius:8px!important;
+  padding:8px 16px!important;
+  font-size:13px!important;
+  font-weight:500!important;
+  color:#6b7280!important;
+  background:transparent!important;
+  border:none!important;
+}
+.stTabs [aria-selected="true"]{
+  background:#ffffff!important;
+  color:#C45D31!important;
+  box-shadow:0 1px 5px rgba(0,0,0,0.1)!important;
+  font-weight:700!important;
+}
+.stTabs [data-baseweb="tab-highlight"]{display:none!important;}
+.stTabs [data-baseweb="tab-border"]{display:none!important;}
+
+/* ── 버튼 ── */
+.stButton>button{
+  border-radius:9px!important;
+  font-weight:500!important;
+  font-size:13px!important;
+  border:1px solid #e0e4eb!important;
+  background:#ffffff!important;
+  color:#374151!important;
+  transition:all 0.15s!important;
+}
+.stButton>button:hover{border-color:#C45D31!important;color:#C45D31!important;}
+
+/* ── 사이드바 ── */
+section[data-testid="stSidebar"] .stMarkdown h3{
+  font-size:11px!important;color:#9ca3af!important;
+  letter-spacing:0.8px!important;text-transform:uppercase!important;
+  margin-bottom:8px!important;
+}
+section[data-testid="stSidebar"] [data-testid="stMultiSelect"] > div,
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] > div {
+  border-radius:9px!important;
+}
+
+/* ── expander ── */
+[data-testid="stExpander"]{
+  border:none!important;
+  border-radius:12px!important;
+  background:#ffffff!important;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05)!important;
+}
+
+/* ── 검색 인풋 ── */
+[data-testid="stTextInput"]>div>div>input{
+  border-radius:9px!important;
+  border:1px solid #e0e4eb!important;
+  font-size:13px!important;
+}
 </style>""", unsafe_allow_html=True)
 
 
