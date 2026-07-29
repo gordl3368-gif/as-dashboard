@@ -2,7 +2,7 @@ name: Keep Streamlit Alive
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # 30분마다 실행
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -15,17 +15,35 @@ jobs:
           playwright install chromium --with-deps -q
           python - <<'EOF'
           from playwright.sync_api import sync_playwright
+          import time
+
           urls = [
             "https://as-dashboard-umlmnwqizgdf5tkjtc9dm3.streamlit.app",
             "https://as-dashboard-umlmnwqizgdf5tkjtc9dm3.streamlit.app/survey",
           ]
+
           with sync_playwright() as p:
               browser = p.chromium.launch()
               for url in urls:
                   try:
                       page = browser.new_page()
-                      page.goto(url, timeout=60000)
-                      page.wait_for_timeout(8000)
+                      page.goto(url, timeout=90000, wait_until="domcontentloaded")
+
+                      # 잠든 상태면 깨우기 버튼 클릭
+                      for _ in range(3):
+                          try:
+                              wake_btn = page.locator("text=Yes, get me up").first
+                              if wake_btn.is_visible(timeout=3000):
+                                  wake_btn.click()
+                                  print(f"WAKE: clicked wake button at {url}")
+                                  page.wait_for_timeout(20000)
+                                  break
+                          except Exception:
+                              pass
+                          page.wait_for_timeout(3000)
+
+                      # 앱이 완전히 로드될 때까지 대기
+                      page.wait_for_timeout(20000)
                       print(f"OK: {url}")
                       page.close()
                   except Exception as e:
