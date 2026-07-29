@@ -694,6 +694,26 @@ with tab4:
     dcols = [c for c in ["순번","접수일자","HA번호","업체명","제품명","시리얼",
                           "유형","증상","원인","처치","상태","완료일자"] if c in f.columns]
 
+    # 검색 필터
+    _sa, _sb = st.columns([3, 1])
+    with _sa:
+        _search = st.text_input("🔍 검색", placeholder="업체명 또는 시리얼 번호 입력", label_visibility="collapsed")
+    with _sb:
+        _search_clear = st.button("초기화", use_container_width=True)
+    if _search_clear:
+        _search = ""
+
+    if _search.strip():
+        _kw = _search.strip().lower()
+        _mask = (
+            f["업체명"].astype(str).str.lower().str.contains(_kw, na=False) |
+            f["시리얼"].astype(str).str.lower().str.contains(_kw, na=False)
+        )
+        f_search = f[_mask]
+        st.caption(f"'{_search}' 검색 결과: {len(f_search)}건")
+    else:
+        f_search = f
+
     def render_table(data):
         if data.empty:
             st.info("데이터 없음")
@@ -710,20 +730,20 @@ with tab4:
         st.dataframe(d.drop(columns=["_dup"]).style.apply(hl, axis=1),
                      use_container_width=True, height=420)
 
-    prod_list_d = sorted(f["제품명"].dropna().unique().tolist())
+    prod_list_d = sorted(f_search["제품명"].dropna().unique().tolist())
     d_tabs = st.tabs(["전체"] + prod_list_d)
 
     with d_tabs[0]:
-        if "유형" in f.columns:
-            vc = f["유형"].value_counts()
+        if "유형" in f_search.columns:
+            vc = f_search["유형"].value_counts()
             sc = st.columns(min(len(vc), 6))
             for i, (k, v) in enumerate(vc.items()):
                 if i < len(sc): sc[i].metric(k, f"{v}건")
-        render_table(f)
+        render_table(f_search)
 
     for i, prod in enumerate(prod_list_d):
         with d_tabs[i+1]:
-            pdata = f[f["제품명"] == prod]
+            pdata = f_search[f_search["제품명"] == prod]
             st.caption(f"{prod} — 총 {len(pdata)}건")
             render_table(pdata)
 
