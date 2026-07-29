@@ -71,28 +71,23 @@ section[data-testid="stSidebar"]{background:#ffffff!important;border-right:1px s
 
 /* ── 탭 스타일 ── */
 .stTabs [data-baseweb="tab-list"]{
-  background:#e8ecf0!important;
-  border-radius:10px!important;
-  padding:4px!important;
-  gap:2px!important;
-  border-bottom:none!important;
+  gap:4px!important;
+  border-bottom:2px solid #e8ecf0!important;
+  background:transparent!important;
+  padding-bottom:0!important;
 }
 .stTabs [data-baseweb="tab"]{
-  border-radius:8px!important;
-  padding:8px 16px!important;
+  padding:10px 18px!important;
   font-size:13px!important;
   font-weight:500!important;
   color:#6b7280!important;
   background:transparent!important;
   border:none!important;
+  border-radius:0!important;
 }
-.stTabs [aria-selected="true"]{
-  background:#ffffff!important;
-  color:#C45D31!important;
-  box-shadow:0 1px 5px rgba(0,0,0,0.1)!important;
-  font-weight:700!important;
-}
-.stTabs [data-baseweb="tab-highlight"]{display:none!important;}
+.stTabs [data-baseweb="tab"]:hover{color:#C45D31!important;background:rgba(196,93,49,0.05)!important;}
+.stTabs [aria-selected="true"]{color:#C45D31!important;font-weight:700!important;}
+.stTabs [data-baseweb="tab-highlight"]{background:#C45D31!important;height:2px!important;}
 .stTabs [data-baseweb="tab-border"]{display:none!important;}
 
 /* ── 버튼 ── */
