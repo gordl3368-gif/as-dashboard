@@ -1002,36 +1002,6 @@ with tab6:
                     )
                     st.plotly_chart(fig_sc, use_container_width=True)
 
-        # 월별 항목별 평균 추이
-        with st.container(border=True):
-            st.markdown("**월별 항목별 평균 추이**")
-            trend_m = sdf.dropna(subset=["제출일시"]).copy()
-            trend_m["월"] = trend_m["제출일시"].dt.month
-            _score_cols = [c for c in score_cols if c in trend_m.columns]
-            _months_s = sorted(trend_m["월"].dropna().unique().astype(int).tolist())
-            if len(_months_s) > 0 and _score_cols:
-                fig_ms = go.Figure()
-                for i, sc in enumerate(_score_cols):
-                    _mv = trend_m.groupby("월")[sc].mean().reindex(_months_s)
-                    clr, _ = PALETTE[i % len(PALETTE)]
-                    fig_ms.add_trace(go.Scatter(
-                        x=[f"{m}월" for m in _months_s], y=_mv.round(2).values,
-                        name=SURVEY_LABELS.get(sc, sc), mode="lines+markers",
-                        line=dict(color=clr, width=2),
-                        marker=dict(size=7, color=clr, line=dict(width=2, color="white")),
-                    ))
-                fig_ms.update_layout(
-                    plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                    height=240, margin=dict(t=10, b=30, l=40, r=10),
-                    yaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False),
-                    xaxis=dict(gridcolor="#f0f4f8", zeroline=False,
-                               categoryorder="array", categoryarray=[f"{m}월" for m in _months_s]),
-                    legend=dict(orientation="h", y=1.12, x=0, font=dict(size=11)),
-                )
-                st.plotly_chart(fig_ms, use_container_width=True)
-            else:
-                st.caption("월별 데이터가 충분하지 않습니다.")
-
         # 최근 응답 목록
         with st.container(border=True):
             st.markdown("**최근 응답 목록**")
