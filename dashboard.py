@@ -781,10 +781,10 @@ with tab4:
     dcols = [c for c in ["순번","접수일자","HA번호","업체명","제품명","시리얼",
                           "유형","증상","원인","처치","상태","완료일자"] if c in f.columns]
 
-    # 검색 필터
+    # 시리얼 번호 검색
     _sa, _sb = st.columns([3, 1])
     with _sa:
-        _search = st.text_input("🔍 검색", placeholder="업체명 또는 시리얼 번호 입력", label_visibility="collapsed")
+        _search = st.text_input("🔍 검색", placeholder="시리얼 번호 입력", label_visibility="collapsed")
     with _sb:
         _search_clear = st.button("초기화", use_container_width=True)
     if _search_clear:
@@ -792,10 +792,7 @@ with tab4:
 
     if _search.strip():
         _kw = _search.strip().lower()
-        _mask = (
-            f["업체명"].astype(str).str.lower().str.contains(_kw, na=False) |
-            f["시리얼"].astype(str).str.lower().str.contains(_kw, na=False)
-        )
+        _mask = f["시리얼"].astype(str).str.lower().str.contains(_kw, na=False)
         f_search = f[_mask]
         st.caption(f"'{_search}' 검색 결과: {len(f_search)}건")
     else:
