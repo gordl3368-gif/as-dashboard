@@ -1017,11 +1017,12 @@ with tab7:
     import re as _re
 
     def _co_group(name):
-        """업체명에서 기본 그룹명 추출 — _ / ( / 공백+지점·지사·센터 등 제거"""
+        """업체명에서 기본 그룹명 추출 — _ 기준으로만 분리, 지역명 suffix 제거"""
         n = str(name).strip()
-        n = _re.split(r'[_\(]', n)[0].strip()
+        # _ 기준으로만 분리 (괄호는 법인 표기이므로 건드리지 않음)
+        n = n.split('_')[0].strip()
         n = _re.sub(r'\s*(지점|지사|센터|본점|부산|서울|대구|광주|대전|인천|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s*$', '', n).strip()
-        return n
+        return n if n else str(name).strip()
 
     company_list = sorted(df["업체명"].dropna().unique().tolist())
     if not company_list:
