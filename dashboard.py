@@ -1016,11 +1016,24 @@ with tab6:
 with tab7:
     import re as _re
 
+    # 수동 별칭 — 같은 업체인데 이름이 다른 경우 여기에 추가
+    CO_ALIASES = {
+        "태인메딕스 주식회사": "태인메딕스",
+        "주식회사 태인메딕스": "태인메딕스",
+    }
+
     def _co_group(name):
-        """업체명에서 기본 그룹명 추출 — _ 기준으로만 분리, 지역명 suffix 제거"""
+        """업체명에서 기본 그룹명 추출"""
         n = str(name).strip()
-        # _ 기준으로만 분리 (괄호는 법인 표기이므로 건드리지 않음)
+        # 수동 별칭 우선 적용
+        if n in CO_ALIASES:
+            return CO_ALIASES[n]
+        # _ 기준으로만 분리
         n = n.split('_')[0].strip()
+        # 법인 형태 suffix/prefix 제거 (주식회사, 유한회사 등)
+        n = _re.sub(r'\s*(주식회사|유한회사|유한책임회사)\s*$', '', n).strip()
+        n = _re.sub(r'^(주식회사|유한회사)\s*', '', n).strip()
+        # 지역명 suffix 제거
         n = _re.sub(r'\s*(지점|지사|센터|본점|부산|서울|대구|광주|대전|인천|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s*$', '', n).strip()
         return n if n else str(name).strip()
 
