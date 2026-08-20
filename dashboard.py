@@ -335,7 +335,7 @@ with k6: st.metric("중복 S/N", f"{dup_cnt}건",
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "📨 발송이력"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도"])
 
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
@@ -888,36 +888,18 @@ with tab6:
         "안내및소통": "진행 안내 및 소통",
     }
 
-    # 발송건 수 (처리보고서_대기 완료 건수와 비교)
-    @st.cache_data(ttl=60)
-    def load_queue_count():
-        try:
-            client = _get_gspread_client()
-            sh = client.open_by_key(SPREADSHEET_ID)
-            ws = sh.worksheet("처리보고서_대기")
-            rows = ws.get_all_values()
-            if len(rows) <= 1:
-                return 0
-            return sum(1 for r in rows[1:] if r and r[0] in ("발송완료", "일부완료"))
-        except Exception:
-            return 0
-
-    sent_total = load_queue_count()
-
     if sdf is None or sdf.empty:
         st.info("아직 만족도 평가 데이터가 없습니다. 보고서 발송 이메일의 링크를 통해 수집됩니다.")
     else:
         total = len(sdf)
         score_cols = ["전체만족도","접수편의성","담당자응대","안내및소통"]
         avgs = {c: round(sdf[c].mean(), 2) for c in score_cols if c in sdf.columns}
-        resp_rate = round(total / sent_total * 100, 1) if sent_total > 0 else 0
 
         # KPI
-        kc = st.columns(len(avgs) + 2)
+        kc = st.columns(len(avgs) + 1)
         kc[0].metric("총 응답 수", f"{total}건")
-        kc[1].metric("응답률", f"{resp_rate}%", f"{sent_total}건 발송 중", delta_color="off")
         for i, (col, val) in enumerate(avgs.items()):
-            kc[i+2].metric(SURVEY_LABELS.get(col, col), f"{val} / 5")
+            kc[i+1].metric(SURVEY_LABELS.get(col, col), f"{val} / 5")
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -1024,90 +1006,3 @@ with tab6:
             recent = sdf[show_cols].sort_values("제출일시", ascending=False).head(20).copy()
             recent["제출일시"] = recent["제출일시"].dt.strftime("%Y-%m-%d %H:%M")
             st.dataframe(recent, use_container_width=True, hide_index=True, height=300)
-
-
-# ═══ TAB 7: 발송이력 ════════════════════════════════════════════════════════
-with tab7:
-    @st.cache_data(ttl=60)
-    def load_queue():
-        try:
-            client = _get_gspread_client()
-            sh = client.open_by_key(SPREADSHEET_ID)
-            ws = sh.worksheet("처리보고서_대기")
-            rows = ws.get_all_values()
-            if len(rows) <= 1:
-                return None
-            cols = rows[0] if rows[0] else ["상태","","시리얼","업체명","담당자","이메일","","처리시각","비고"]
-            qdf = pd.DataFrame(rows[1:], columns=cols[:len(rows[1])] if rows[1:] else cols)
-            # 컬럼명 표준화 (인덱스 기반)
-            col_map = {0:"상태", 2:"시리얼", 3:"업체명", 4:"담당자", 5:"이메일", 7:"처리시각", 8:"비고"}
-            qdf = qdf.rename(columns={qdf.columns[k]: v for k, v in col_map.items() if k < len(qdf.columns)})
-            if "처리시각" in qdf.columns:
-                qdf["처리시각"] = pd.to_datetime(qdf["처리시각"], errors="coerce")
-            return qdf
-        except Exception as e:
-            st.error(f"발송이력 로드 실패: {e}")
-            return None
-
-    qdf = load_queue()
-
-    if qdf is None or qdf.empty:
-        st.info("발송 이력이 없습니다.")
-    else:
-        _status_map = {
-            "발송완료": ("완료", "#34a853"),
-            "일부완료": ("일부완료", "#fbbc04"),
-            "오류":     ("오류", "#ea4335"),
-            "대기":     ("대기", "#9ca3af"),
-        }
-
-        _total   = len(qdf)
-        _done    = len(qdf[qdf["상태"] == "발송완료"])
-        _partial = len(qdf[qdf["상태"] == "일부완료"])
-        _error   = len(qdf[qdf["상태"] == "오류"])
-        _pending = len(qdf[qdf["상태"] == "대기"])
-
-        # KPI
-        qk1, qk2, qk3, qk4, qk5 = st.columns(5)
-        qk1.metric("전체 발송건", f"{_total}건")
-        qk2.metric("발송완료", f"{_done}건")
-        qk3.metric("일부완료", f"{_partial}건", delta_color="off")
-        qk4.metric("오류", f"{_error}건", "⚠ 확인 필요" if _error else "", delta_color="inverse" if _error else "off")
-        qk5.metric("대기 중", f"{_pending}건", delta_color="off")
-
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
-        # 상태 필터
-        _status_options = ["전체"] + sorted(qdf["상태"].dropna().unique().tolist())
-        _sel_status = st.radio("상태 필터", _status_options, horizontal=True)
-
-        qdf_view = qdf if _sel_status == "전체" else qdf[qdf["상태"] == _sel_status]
-
-        # 발송 목록 테이블
-        with st.container(border=True):
-            st.markdown(f"**발송 목록** ({len(qdf_view)}건)")
-            _show = [c for c in ["처리시각","상태","업체명","시리얼","담당자","이메일","비고"] if c in qdf_view.columns]
-            _view = qdf_view[_show].sort_values("처리시각", ascending=False).copy()
-            if "처리시각" in _view.columns:
-                _view["처리시각"] = _view["처리시각"].dt.strftime("%Y-%m-%d %H:%M").fillna("")
-
-            def _hl_status(row):
-                s = row.get("상태", "")
-                colors = {"발송완료": "#f0fdf4", "오류": "#fff5f5", "대기": "#f9fafb", "일부완료": "#fffbf0"}
-                bg = colors.get(s, "")
-                return [f"background-color:{bg}"] * len(row) if bg else [""] * len(row)
-
-            st.dataframe(_view.style.apply(_hl_status, axis=1),
-                         use_container_width=True, hide_index=True, height=420)
-
-        # 이번달 발송 현황
-        if "처리시각" in qdf.columns:
-            _this_m_q = qdf[qdf["처리시각"].dt.month == cur_m]
-            if not _this_m_q.empty:
-                with st.container(border=True):
-                    st.markdown(f"**이번달 ({cur_m}월) 발송 현황**")
-                    _vc = _this_m_q["상태"].value_counts()
-                    _cols = st.columns(min(len(_vc), 4))
-                    for i, (s, cnt) in enumerate(_vc.items()):
-                        if i < len(_cols):
-                            _cols[i].metric(s, f"{cnt}건")
