@@ -335,7 +335,7 @@ with k6: st.metric("중복 S/N", f"{dup_cnt}건",
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회"])
 
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
@@ -1010,3 +1010,143 @@ with tab6:
             recent = sdf[show_cols].sort_values("제출일시", ascending=False).head(20).copy()
             recent["제출일시"] = recent["제출일시"].dt.strftime("%Y-%m-%d %H:%M")
             st.dataframe(recent, use_container_width=True, hide_index=True, height=300)
+
+
+# ═══ TAB 7: 업체별 조회 ═════════════════════════════════════════════════════
+with tab7:
+    company_list = sorted(df["업체명"].dropna().unique().tolist())
+    if not company_list:
+        st.info("업체 데이터가 없습니다.")
+    else:
+        # 검색창
+        _ca, _cb = st.columns([4, 1])
+        with _ca:
+            _co_search = st.text_input("🔍 업체명 검색", placeholder="업체명 입력", label_visibility="collapsed")
+        with _cb:
+            _co_clear = st.button("초기화", use_container_width=True, key="co_clear")
+        if _co_clear:
+            _co_search = ""
+
+        if _co_search.strip():
+            _matched = [c for c in company_list if _co_search.strip().lower() in c.lower()]
+        else:
+            _matched = company_list
+
+        if not _matched:
+            st.warning("검색 결과가 없습니다.")
+        else:
+            sel_co = st.selectbox("업체 선택", _matched, key="co_sel")
+            co_df = df[df["업체명"] == sel_co].copy()
+
+            st.divider()
+
+            # ── KPI ──────────────────────────────────────────────────────────
+            _co_total = len(co_df)
+            _co_done  = len(co_df[co_df["상태"] == "완료"])
+            _co_prog  = _co_total - _co_done
+            _co_comp  = co_df[co_df["상태"] == "완료"].copy()
+            _co_comp["처리일수"] = (_co_comp["완료일자"] - _co_comp["접수일자"]).dt.days
+            _co_avg_days = round(_co_comp["처리일수"].dropna().mean(), 1) if not _co_comp.empty else "-"
+            _co_dup = int(co_df["시리얼"].isin(dup_sns.index).sum())
+
+            ck1, ck2, ck3, ck4, ck5 = st.columns(5)
+            ck1.metric("총 접수", f"{_co_total}건")
+            ck2.metric("완료", f"{_co_done}건")
+            ck3.metric("진행중", f"{_co_prog}건", delta_color="off")
+            ck4.metric("평균 처리기간", f"{_co_avg_days}일" if _co_avg_days != "-" else "-", delta_color="off")
+            ck5.metric("중복 S/N", f"{_co_dup}건",
+                       "⚠ 재접수 주의" if _co_dup else "이상 없음",
+                       delta_color="inverse" if _co_dup else "off")
+
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+            # ── 제품별 + 유형별 분포 ─────────────────────────────────────────
+            _cc1, _cc2 = st.columns(2)
+
+            with _cc1:
+                with st.container(border=True):
+                    st.markdown("**제품별 접수 현황**")
+                    _cp = co_df.groupby("제품명")["수량"].sum().reset_index().sort_values("수량", ascending=True)
+                    if not _cp.empty:
+                        fig_cp = go.Figure(go.Bar(
+                            y=_cp["제품명"], x=_cp["수량"], orientation="h",
+                            marker=dict(color=[PALETTE[i % len(PALETTE)][0] for i in range(len(_cp))], opacity=0.85),
+                            text=_cp["수량"], textposition="outside", textfont=dict(size=12),
+                        ))
+                        fig_cp.update_layout(
+                            plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                            height=max(160, len(_cp) * 44 + 40),
+                            margin=dict(t=10, b=10, l=10, r=50),
+                            xaxis=dict(gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
+                            yaxis=dict(zeroline=False, tickfont=dict(size=12)),
+                            showlegend=False,
+                        )
+                        st.plotly_chart(fig_cp, use_container_width=True)
+
+            with _cc2:
+                with st.container(border=True):
+                    st.markdown("**유형별 접수 현황**")
+                    if "유형" in co_df.columns:
+                        _ct = co_df[co_df["유형"].astype(str).str.strip() != ""].groupby("유형")["수량"].sum().reset_index().sort_values("수량", ascending=True)
+                        if not _ct.empty:
+                            fig_ct = go.Figure(go.Bar(
+                                y=_ct["유형"], x=_ct["수량"], orientation="h",
+                                marker=dict(color=[PALETTE[i % len(PALETTE)][0] for i in range(len(_ct))], opacity=0.85),
+                                text=_ct["수량"], textposition="outside", textfont=dict(size=12),
+                            ))
+                            fig_ct.update_layout(
+                                plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                                height=max(160, len(_ct) * 44 + 40),
+                                margin=dict(t=10, b=10, l=10, r=50),
+                                xaxis=dict(gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
+                                yaxis=dict(zeroline=False, tickfont=dict(size=12)),
+                                showlegend=False,
+                            )
+                            st.plotly_chart(fig_ct, use_container_width=True)
+
+            # ── 만족도 ───────────────────────────────────────────────────────
+            @st.cache_data(ttl=60)
+            def load_survey_co():
+                try:
+                    client = _get_gspread_client()
+                    sh = client.open_by_key(SPREADSHEET_ID)
+                    ws = sh.worksheet(SURVEY_SHEET)
+                    rows = ws.get_all_values()
+                    if len(rows) < 2:
+                        return None
+                    sdf2 = pd.DataFrame(rows[1:], columns=rows[0])
+                    for c in ["전체만족도","접수편의성","담당자응대","안내및소통"]:
+                        if c in sdf2.columns:
+                            sdf2[c] = pd.to_numeric(sdf2[c], errors="coerce")
+                    return sdf2
+                except Exception:
+                    return None
+
+            sdf2 = load_survey_co()
+            if sdf2 is not None and not sdf2.empty and "업체명" in sdf2.columns:
+                _co_clean = sel_co.replace("㈜","").replace("(주)","").replace(" ","").strip()
+                co_survey = sdf2[sdf2["업체명"].astype(str).str.replace("㈜","").str.replace("(주)","").str.replace(" ","").str.strip() == _co_clean]
+                if not co_survey.empty:
+                    with st.container(border=True):
+                        st.markdown("**만족도 평가 결과**")
+                        _s_cols = ["전체만족도","접수편의성","담당자응대","안내및소통"]
+                        _s_avgs = {c: round(co_survey[c].mean(), 2) for c in _s_cols if c in co_survey.columns}
+                        _sc = st.columns(len(_s_avgs) + 1)
+                        _sc[0].metric("응답 수", f"{len(co_survey)}건")
+                        for i, (col, val) in enumerate(_s_avgs.items()):
+                            _sc[i+1].metric(SURVEY_LABELS.get(col, col), f"{val} / 5")
+
+            # ── 전체 AS 이력 ─────────────────────────────────────────────────
+            with st.container(border=True):
+                st.markdown("**전체 AS 이력**")
+                _dcols = [c for c in ["순번","접수일자","HA번호","제품명","시리얼",
+                                       "유형","증상","원인","처치","상태","완료일자"] if c in co_df.columns]
+                _co_view = co_df[_dcols].sort_values("접수일자", ascending=False).copy()
+                for col in ["접수일자","완료일자"]:
+                    if col in _co_view.columns:
+                        _co_view[col] = pd.to_datetime(_co_view[col], errors="coerce").dt.strftime("%Y-%m-%d").fillna("")
+                def _hl_co(row):
+                    if row.get("상태") == "진행중": return ["background-color:#fffbf0"] * len(row)
+                    return [""] * len(row)
+                st.dataframe(_co_view.style.apply(_hl_co, axis=1),
+                             use_container_width=True, hide_index=True, height=400)
