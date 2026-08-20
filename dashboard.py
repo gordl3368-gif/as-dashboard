@@ -945,28 +945,62 @@ with tab6:
                     )
                     st.plotly_chart(fig_sp, use_container_width=True)
 
-        # 전체만족도 추이
-        with st.container(border=True):
-            st.markdown("**전체 만족도 추이**")
-            trend = sdf.dropna(subset=["제출일시","전체만족도"]).copy()
-            trend = trend.sort_values("제출일시")
-            if not trend.empty:
-                fig_tr = go.Figure(go.Scatter(
-                    x=trend["제출일시"],
-                    y=trend["전체만족도"],
-                    mode="lines+markers",
-                    line=dict(color="#F36C21", width=2),
-                    marker=dict(size=8, color="#F36C21", line=dict(width=2, color="white")),
-                    fill="tozeroy", fillcolor="rgba(243,108,33,0.08)",
-                ))
-                fig_tr.update_layout(
-                    plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                    height=220, margin=dict(t=10, b=30, l=40, r=10),
-                    yaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False),
-                    xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
-                    showlegend=False,
-                )
-                st.plotly_chart(fig_tr, use_container_width=True)
+        # 전체만족도 분포 + 개별 응답 스캐터
+        _tr_left, _tr_right = st.columns(2)
+
+        with _tr_left:
+            with st.container(border=True):
+                st.markdown("**점수 분포**")
+                if "전체만족도" in sdf.columns:
+                    _dist = sdf["전체만족도"].dropna().astype(int).value_counts().reindex([1,2,3,4,5], fill_value=0)
+                    _score_colors = ["#ea4335","#fbbc04","#fbbc04","#34a853","#34a853"]
+                    fig_dist = go.Figure(go.Bar(
+                        x=["1점\n매우불만족","2점\n불만족","3점\n보통","4점\n만족","5점\n매우만족"],
+                        y=_dist.values,
+                        marker=dict(color=_score_colors, opacity=0.85),
+                        text=_dist.values,
+                        textposition="outside",
+                        textfont=dict(size=13, color="#1a1f36"),
+                    ))
+                    fig_dist.update_layout(
+                        plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                        height=220, margin=dict(t=10, b=10, l=20, r=20),
+                        xaxis=dict(gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=11)),
+                        yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero",
+                                   tick0=0, dtick=1),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(fig_dist, use_container_width=True)
+
+        with _tr_right:
+            with st.container(border=True):
+                st.markdown("**개별 응답 추이**")
+                trend = sdf.dropna(subset=["제출일시","전체만족도"]).copy()
+                trend = trend.sort_values("제출일시")
+                if not trend.empty:
+                    _hover = trend.get("업체명", pd.Series([""] * len(trend))).fillna("").astype(str)
+                    fig_sc = go.Figure(go.Scatter(
+                        x=trend["제출일시"],
+                        y=trend["전체만족도"],
+                        mode="markers+text",
+                        marker=dict(size=14, color="#F36C21",
+                                    line=dict(width=2, color="white"),
+                                    symbol="circle"),
+                        text=trend["전체만족도"].astype(int).astype(str) + "점",
+                        textposition="top center",
+                        textfont=dict(size=11, color="#F36C21"),
+                        hovertext=_hover,
+                        hovertemplate="%{hovertext}<br>%{x|%m/%d}<br>%{y}점<extra></extra>",
+                    ))
+                    fig_sc.update_layout(
+                        plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                        height=220, margin=dict(t=30, b=30, l=40, r=10),
+                        yaxis=dict(range=[0, 5.8], gridcolor="#f0f4f8", zeroline=False,
+                                   tick0=1, dtick=1, tickvals=[1,2,3,4,5]),
+                        xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
+                        showlegend=False,
+                    )
+                    st.plotly_chart(fig_sc, use_container_width=True)
 
         # 월별 항목별 평균 추이
         with st.container(border=True):
