@@ -1014,10 +1014,25 @@ with tab6:
 
 # ═══ TAB 7: 업체별 조회 ═════════════════════════════════════════════════════
 with tab7:
+    import re as _re
+
+    def _co_group(name):
+        """업체명에서 기본 그룹명 추출 — _ / ( / 공백+지점·지사·센터 등 제거"""
+        n = str(name).strip()
+        n = _re.split(r'[_\(]', n)[0].strip()
+        n = _re.sub(r'\s*(지점|지사|센터|본점|부산|서울|대구|광주|대전|인천|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s*$', '', n).strip()
+        return n
+
     company_list = sorted(df["업체명"].dropna().unique().tolist())
     if not company_list:
         st.info("업체 데이터가 없습니다.")
     else:
+        # 그룹 매핑 생성
+        _group_map = {}  # 그룹명 → [업체명 리스트]
+        for _c in company_list:
+            _g = _co_group(_c)
+            _group_map.setdefault(_g, []).append(_c)
+
         # 검색창
         _ca, _cb = st.columns([4, 1])
         with _ca:
@@ -1027,16 +1042,31 @@ with tab7:
         if _co_clear:
             _co_search = ""
 
+        # 검색 필터링
         if _co_search.strip():
-            _matched = [c for c in company_list if _co_search.strip().lower() in c.lower()]
+            _kw = _co_search.strip().lower()
+            _filtered_groups = {g: v for g, v in _group_map.items() if _kw in g.lower() or any(_kw in c.lower() for c in v)}
         else:
-            _matched = company_list
+            _filtered_groups = _group_map
 
-        if not _matched:
+        if not _filtered_groups:
             st.warning("검색 결과가 없습니다.")
         else:
-            sel_co = st.selectbox("업체 선택", _matched, key="co_sel")
-            co_df = df[df["업체명"] == sel_co].copy()
+            # 드롭다운 표시명 (그룹에 여러 업체면 N개 표시)
+            _display_list = sorted([
+                f"{g} ({len(v)}개)" if len(v) > 1 else g
+                for g, v in _filtered_groups.items()
+            ])
+            _sel_display = st.selectbox("업체 선택", _display_list, key="co_sel")
+
+            # 선택된 그룹명 역추출
+            _sel_group = _re.sub(r'\s*\(\d+개\)$', '', _sel_display).strip()
+            _sel_companies = _filtered_groups.get(_sel_group, [_sel_group])
+
+            if len(_sel_companies) > 1:
+                st.caption(f"포함 업체: {' / '.join(_sel_companies)}")
+
+            co_df = df[df["업체명"].isin(_sel_companies)].copy()
 
             st.divider()
 
@@ -1124,8 +1154,7 @@ with tab7:
 
             sdf2 = load_survey_co()
             if sdf2 is not None and not sdf2.empty and "업체명" in sdf2.columns:
-                _co_clean = sel_co.replace("㈜","").replace("(주)","").replace(" ","").strip()
-                co_survey = sdf2[sdf2["업체명"].astype(str).str.replace("㈜","").str.replace("(주)","").str.replace(" ","").str.strip() == _co_clean]
+                co_survey = sdf2[sdf2["업체명"].isin(_sel_companies)]
                 if not co_survey.empty:
                     with st.container(border=True):
                         st.markdown("**만족도 평가 결과**")
