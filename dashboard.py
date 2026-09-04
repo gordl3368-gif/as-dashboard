@@ -570,7 +570,7 @@ with tab1:
                     textinfo="label+percent", textfont=dict(size=11),
                 ))
                 fig_pie.update_layout(height=300, paper_bgcolor="white",
-                                      margin=dict(t=10,b=10,l=10,r=10),
+                                      margin=dict(t=10,b=40,l=10,r=10),
                                       showlegend=False, font=FONT)
                 st.plotly_chart(fig_pie, use_container_width=True)
 
@@ -617,8 +617,8 @@ with tab1:
                     textinfo="label+percent", textfont=dict(size=12),
                 ))
                 fig4.update_layout(
-                    height=250, paper_bgcolor="white", font=FONT,
-                    margin=dict(t=10,b=10,l=10,r=10), showlegend=False,
+                    height=300, paper_bgcolor="white", font=FONT,
+                    margin=dict(t=10,b=40,l=10,r=10), showlegend=False,
                     annotations=[dict(text=f"<b>{done_pct}%</b><br>완료",
                                       x=0.5, y=0.5, showarrow=False,
                                       font=dict(size=15, family="Noto Sans KR, Malgun Gothic, sans-serif"))]
@@ -671,8 +671,8 @@ with tab2:
                                         line=dict(color="white", width=2)),
                             textinfo="label+percent", textfont=dict(size=11),
                         ))
-                        fig_tp2.update_layout(height=260, paper_bgcolor="white",
-                                              margin=dict(t=10,b=10,l=10,r=10),
+                        fig_tp2.update_layout(height=300, paper_bgcolor="white",
+                                              margin=dict(t=10,b=40,l=10,r=10),
                                               showlegend=False, font=FONT)
                         st.plotly_chart(fig_tp2, use_container_width=True)
         with _pc2:
@@ -688,8 +688,8 @@ with tab2:
                                         line=dict(color="white", width=2)),
                             textinfo="label+percent", textfont=dict(size=11),
                         ))
-                        fig_tr2.update_layout(height=260, paper_bgcolor="white",
-                                              margin=dict(t=10,b=10,l=10,r=10),
+                        fig_tr2.update_layout(height=300, paper_bgcolor="white",
+                                              margin=dict(t=10,b=40,l=10,r=10),
                                               showlegend=False, font=FONT)
                         st.plotly_chart(fig_tr2, use_container_width=True)
 
@@ -753,8 +753,8 @@ with tab3:
                                     line=dict(color="white", width=2)),
                         textinfo="label+percent", textfont=dict(size=11),
                     ))
-                    fig_tp.update_layout(height=250, paper_bgcolor="white",
-                                         margin=dict(t=10,b=10,l=10,r=10),
+                    fig_tp.update_layout(height=300, paper_bgcolor="white",
+                                         margin=dict(t=10,b=40,l=10,r=10),
                                          showlegend=False, font=FONT)
                     st.plotly_chart(fig_tp, use_container_width=True)
 
@@ -770,8 +770,8 @@ with tab3:
                                     line=dict(color="white", width=2)),
                         textinfo="label+percent", textfont=dict(size=11),
                     ))
-                    fig_cp.update_layout(height=250, paper_bgcolor="white",
-                                         margin=dict(t=10,b=10,l=10,r=10),
+                    fig_cp.update_layout(height=300, paper_bgcolor="white",
+                                         margin=dict(t=10,b=40,l=10,r=10),
                                          showlegend=False, font=FONT)
                     st.plotly_chart(fig_cp, use_container_width=True)
 
