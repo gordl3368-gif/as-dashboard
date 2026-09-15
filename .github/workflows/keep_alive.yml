@@ -32,7 +32,7 @@ jobs:
                       # 잠든 상태면 깨우기 버튼 클릭
                       for _ in range(3):
                           try:
-                              wake_btn = page.locator("text=Yes, get me up").first
+                              wake_btn = page.locator("text=Yes, get this app back up!").first
                               if wake_btn.is_visible(timeout=3000):
                                   wake_btn.click()
                                   print(f"WAKE: clicked wake button at {url}")
