@@ -11,10 +11,6 @@ GS_SHEET_NAME  = "고객자산관리대장"
 SURVEY_SHEET   = "만족도평가"
 SA_PATH        = r"C:\Users\user\AS자동화\보고서발송\service_account.json"
 
-LANDING_SPREADSHEET_ID  = "11rqfeZJ-OqvaJoYgFq30PYDQvTS8PuFx8nfJ0Et0bIE"
-LANDING_SHEET_NAME      = "큐라시스2 랜딩장비 관리장"
-UPGRADE_SHEET_NAME      = "큐라시스2 업그레이드 관리장"
-
 import base64 as _b64
 
 def _load_logo():
@@ -182,45 +178,6 @@ def load_data():
         return None, str(e)
 
 
-@st.cache_data(ttl=300)
-def load_landing_data():
-    """랜딩장비 관리장 + 업그레이드 관리장 로드"""
-    try:
-        client = _get_gspread_client()
-        sp = client.open_by_key(LANDING_SPREADSHEET_ID)
-
-        # 랜딩장비 관리장
-        ws_land = sp.worksheet(LANDING_SHEET_NAME)
-        rows_land = ws_land.get_all_values()
-        if len(rows_land) < 2:
-            df_land = pd.DataFrame()
-        else:
-            headers = ["NO", "구분", "SN", "출고일", "납납예정일", "반납일", "랜딩장소", "현위치", "랜딩요청자", "메일", "비고"]
-            padded = [r + [""] * (len(headers) - len(r)) for r in rows_land[1:] if any(c.strip() for c in r)]
-            df_land = pd.DataFrame(padded, columns=headers)
-            df_land = df_land[df_land["SN"].str.strip() != ""]
-            df_land["구분"] = df_land["구분"].str.strip()
-            for col in ["출고일", "납납예정일", "반납일"]:
-                df_land[col] = pd.to_datetime(df_land[col], errors="coerce")
-
-        # 업그레이드 관리장
-        ws_up = sp.worksheet(UPGRADE_SHEET_NAME)
-        rows_up = ws_up.get_all_values()
-        if len(rows_up) < 2:
-            df_up = pd.DataFrame()
-        else:
-            up_headers = ["NO", "업그레이드날짜", "병원", "대리점", "LotNo", "계산서발행"]
-            padded_up = [r + [""] * (len(up_headers) - len(r)) for r in rows_up[1:] if any(c.strip() for c in r)]
-            df_up = pd.DataFrame(padded_up, columns=up_headers)
-            df_up = df_up[df_up["LotNo"].str.strip().apply(lambda x: x != "" and not x.startswith("S/N"))]
-            df_up["업그레이드날짜"] = pd.to_datetime(df_up["업그레이드날짜"], errors="coerce")
-            df_up["계산서발행"] = df_up["계산서발행"].str.strip().str.lower()
-
-        return df_land, df_up, None
-    except Exception as e:
-        return pd.DataFrame(), pd.DataFrame(), str(e)
-
-
 TREAT_MAP = [
     ("PCB·메인보드 교체",              ["pcb", "메인보드"]),
     ("핫멜트 작업",                    ["핫멜트", "핫 멜트", "핫멧트", "핫맬트"]),
@@ -378,7 +335,7 @@ with k6: st.metric("중복 S/N", f"{dup_cnt}건",
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회", "📦 랜딩장비 현황"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회"])
 
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
@@ -1233,137 +1190,3 @@ with tab7:
                     return [""] * len(row)
                 st.dataframe(_co_view.style.apply(_hl_co, axis=1),
                              use_container_width=True, hide_index=True, height=400)
-
-
-# ═══ TAB 8: 랜딩장비 현황 ════════════════════════════════════════════════════
-with tab8:
-    df_land, df_up, land_err = load_landing_data()
-
-    if land_err:
-        st.error(f"데이터 로드 오류: {land_err}")
-    else:
-        today = pd.Timestamp.today().normalize()
-
-        # ── 사이드바: 장기 미회수 기준 ──
-        overdue_days = st.sidebar.number_input("장기 미회수 기준 (일)", min_value=1, value=14, step=1, key="overdue_days")
-
-        # ── 싱글 / 듀얼 지표 계산 ──
-        def landing_metrics(df, label):
-            d = df[df["구분"] == label].copy() if not df.empty else pd.DataFrame()
-            total    = len(d)
-            out      = int((d["출고일"].notna() & d["반납일"].isna()).sum()) if not d.empty else 0
-            overdue  = int((d["출고일"].notna() & d["반납일"].isna() &
-                            (today - d["출고일"].fillna(today)).dt.days.gt(overdue_days)).sum()) if not d.empty else 0
-            return total, out, overdue
-
-        sing_total, sing_out, sing_over = landing_metrics(df_land, "싱글")
-        dual_total, dual_out, dual_over = landing_metrics(df_land, "듀얼")
-
-        # ── KPI 카드 ──
-        st.markdown("### 📦 싱글 채널")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("보유 수량", f"{sing_total}대")
-        c2.metric("출고 수량", f"{sing_out}대")
-        c3.metric(f"장기 미회수 ({overdue_days}일+)", f"{sing_over}대",
-                  delta=f"{sing_over}건 주의" if sing_over else None,
-                  delta_color="inverse")
-
-        st.markdown("### 📦 듀얼 채널")
-        c4, c5, c6 = st.columns(3)
-        c4.metric("보유 수량", f"{dual_total}대")
-        c5.metric("출고 수량", f"{dual_out}대")
-        c6.metric(f"장기 미회수 ({overdue_days}일+)", f"{dual_over}대",
-                  delta=f"{dual_over}건 주의" if dual_over else None,
-                  delta_color="inverse")
-
-        st.markdown("---")
-
-        # ── RPM별 신청 횟수 ──
-        st.markdown("### 👤 RPM별 신청 횟수")
-        if not df_land.empty and "랜딩요청자" in df_land.columns:
-            rpm_df = (df_land[df_land["랜딩요청자"].str.strip() != ""]
-                      .groupby("랜딩요청자")
-                      .size()
-                      .reset_index(name="신청 횟수")
-                      .sort_values("신청 횟수", ascending=False))
-            col_r, col_chart = st.columns([1, 2])
-            with col_r:
-                st.dataframe(rpm_df, use_container_width=True, hide_index=True)
-            with col_chart:
-                fig_rpm = go.Figure(go.Bar(
-                    x=rpm_df["신청 횟수"],
-                    y=rpm_df["랜딩요청자"],
-                    orientation="h",
-                    marker_color="#C45D31",
-                    text=rpm_df["신청 횟수"],
-                    textposition="outside",
-                ))
-                fig_rpm.update_layout(
-                    height=max(250, len(rpm_df) * 45),
-                    margin=dict(l=10, r=30, t=10, b=10),
-                    xaxis_title="신청 횟수",
-                    yaxis=dict(autorange="reversed"),
-                    plot_bgcolor="white",
-                    paper_bgcolor="white",
-                )
-                st.plotly_chart(fig_rpm, use_container_width=True)
-        else:
-            st.info("랜딩요청자 데이터가 없습니다.")
-
-        st.markdown("---")
-
-        # ── 듀얼채널 업그레이드 현황 ──
-        st.markdown("### 🔄 듀얼채널 업그레이드 현황")
-        if not df_up.empty:
-            total_cases  = df_up["NO"].replace("", pd.NA).dropna().nunique()
-            total_devices = len(df_up)
-            issued       = int((df_up["계산서발행"] == "o").sum())
-            not_issued   = total_devices - issued
-
-            u1, u2, u3, u4 = st.columns(4)
-            u1.metric("총 업그레이드 건수", f"{total_cases}건")
-            u2.metric("총 업그레이드 기기", f"{total_devices}대")
-            u3.metric("계산서 발행 완료", f"{issued}대")
-            u4.metric("계산서 미발행", f"{not_issued}대",
-                      delta=f"{not_issued}건 미발행" if not_issued else None,
-                      delta_color="inverse")
-
-            # 병원별 현황
-            st.markdown("#### 병원별 업그레이드 현황")
-            hosp_df = (df_up[df_up["병원"].str.strip() != ""]
-                       .groupby("병원")
-                       .agg(기기수=("LotNo", "count"),
-                            계산서발행=("계산서발행", lambda x: (x == "o").sum()))
-                       .reset_index()
-                       .sort_values("기기수", ascending=False))
-            hosp_df["미발행"] = hosp_df["기기수"] - hosp_df["계산서발행"]
-
-            col_h, col_hc = st.columns([1, 2])
-            with col_h:
-                st.dataframe(hosp_df, use_container_width=True, hide_index=True)
-            with col_hc:
-                fig_h = go.Figure(go.Bar(
-                    x=hosp_df["기기수"],
-                    y=hosp_df["병원"],
-                    orientation="h",
-                    marker_color="#C45D31",
-                    text=hosp_df["기기수"],
-                    textposition="outside",
-                ))
-                fig_h.update_layout(
-                    height=max(250, len(hosp_df) * 40),
-                    margin=dict(l=10, r=30, t=10, b=10),
-                    xaxis_title="기기 수",
-                    yaxis=dict(autorange="reversed"),
-                    plot_bgcolor="white",
-                    paper_bgcolor="white",
-                )
-                st.plotly_chart(fig_h, use_container_width=True)
-
-            # 상세 목록
-            with st.expander("전체 목록 보기"):
-                view = df_up.copy()
-                view["업그레이드날짜"] = view["업그레이드날짜"].dt.strftime("%Y-%m-%d").fillna("")
-                st.dataframe(view, use_container_width=True, hide_index=True)
-        else:
-            st.info("업그레이드 데이터가 없습니다.")
