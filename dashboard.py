@@ -1201,10 +1201,13 @@ with tab8:
     @st.cache_data(ttl=300)
     def load_landing():
         try:
-            creds = service_account.Credentials.from_service_account_file(
-                SA_PATH,
-                scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
-            )
+            SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+            if "gcp_service_account" in st.secrets:
+                creds = service_account.Credentials.from_service_account_info(
+                    st.secrets["gcp_service_account"], scopes=SCOPES)
+            else:
+                creds = service_account.Credentials.from_service_account_file(
+                    SA_PATH, scopes=SCOPES)
             gc  = gspread.authorize(creds)
             ss  = gc.open_by_key(LANDING_SS_ID)
 
