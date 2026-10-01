@@ -1254,13 +1254,13 @@ with tab8:
         sub = df[df[COL_TYPE] == type_val] if COL_TYPE in df.columns else df
         total   = len(sub)
         shipped = sub[COL_SHIP].notna() & sub[COL_RET].isna() if COL_SHIP in sub.columns and COL_RET in sub.columns else pd.Series([False]*len(sub))
-        out_cnt = shipped.sum()
+        out_cnt = int(shipped.sum())
         hold    = total - out_cnt
-        overdue = (shipped & ((today - sub[COL_SHIP]).dt.days >= LANDING_OVERDUE)).sum() if COL_SHIP in sub.columns else 0
-        return int(hold), int(out_cnt), int(overdue)
+        overdue = int((shipped & ((today - sub[COL_SHIP]).dt.days >= LANDING_OVERDUE)).sum()) if COL_SHIP in sub.columns else 0
+        return total, int(hold), out_cnt, overdue
 
-    sg_hold, sg_out, sg_over = calc_stats(mdf, "싱글")
-    dl_hold, dl_out, dl_over = calc_stats(mdf, "듀얼")
+    sg_total, sg_hold, sg_out, sg_over = calc_stats(mdf, "싱글")
+    dl_total, dl_hold, dl_out, dl_over = calc_stats(mdf, "듀얼")
 
     # ── 헤더
     st.markdown("""
@@ -1272,10 +1272,11 @@ with tab8:
 
     # ── KPI 행 1: 싱글
     st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:0 0 6px;'>◼ 싱글채널</p>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
-    c1.metric("보유 수량",     f"{sg_hold}대")
-    c2.metric("출고 수량",     f"{sg_out}대")
-    c3.metric("장기 미회수",   f"{sg_over}대",
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("총 수량",     f"{sg_total}대")
+    c2.metric("출고중",      f"{sg_out}대")
+    c3.metric("보유중",      f"{sg_hold}대")
+    c4.metric("장기 미회수", f"{sg_over}대",
               delta=f"-{sg_over}대" if sg_over else None,
               delta_color="inverse")
 
@@ -1283,10 +1284,11 @@ with tab8:
 
     # ── KPI 행 2: 듀얼
     st.markdown("<p style='font-size:12px;font-weight:700;color:#C45D31;margin:0 0 6px;'>◼ 듀얼채널</p>", unsafe_allow_html=True)
-    c4, c5, c6 = st.columns(3)
-    c4.metric("보유 수량",     f"{dl_hold}대")
-    c5.metric("출고 수량",     f"{dl_out}대")
-    c6.metric("장기 미회수",   f"{dl_over}대",
+    c5, c6, c7, c8 = st.columns(4)
+    c5.metric("총 수량",     f"{dl_total}대")
+    c6.metric("출고중",      f"{dl_out}대")
+    c7.metric("보유중",      f"{dl_hold}대")
+    c8.metric("장기 미회수", f"{dl_over}대",
               delta=f"-{dl_over}대" if dl_over else None,
               delta_color="inverse")
 
