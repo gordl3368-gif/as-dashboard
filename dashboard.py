@@ -11,6 +11,11 @@ GS_SHEET_NAME  = "고객자산관리대장"
 SURVEY_SHEET   = "만족도평가"
 SA_PATH        = r"C:\Users\user\AS자동화\보고서발송\service_account.json"
 
+LANDING_MASTER  = "큐라시스2 랜딩장비 관리장"
+LANDING_HISTORY = "출고 이력"
+LANDING_OVERDUE = 14
+LANDING_SS_ID   = "11rqfeZJ-OqvaJoYgFq30PYDQvTS8PuFx8nfJ0Et0bIE"
+
 import base64 as _b64
 
 def _load_logo():
@@ -335,7 +340,7 @@ with k6: st.metric("중복 S/N", f"{dup_cnt}건",
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회", "🚀 랜딩장비 현황"])
 
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
@@ -1191,4 +1196,150 @@ with tab7:
                 st.dataframe(_co_view.style.apply(_hl_co, axis=1),
                              use_container_width=True, hide_index=True, height=400)
 
-# ══ (랜딩장비 탭은 시트 정리 후 추가 예정) ══
+# ══ TAB 8 — 랜딩장비 현황 ════════════════════════════════════════════════════
+with tab8:
+    @st.cache_data(ttl=300)
+    def load_landing():
+        try:
+            creds = service_account.Credentials.from_service_account_file(
+                SA_PATH,
+                scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"]
+            )
+            gc  = gspread.authorize(creds)
+            ss  = gc.open_by_key(LANDING_SS_ID)
+
+            # 마스터 시트
+            mw   = ss.worksheet(LANDING_MASTER)
+            mraw = mw.get_all_values()
+            mdf  = pd.DataFrame(mraw[1:], columns=mraw[0]) if len(mraw) > 1 else pd.DataFrame()
+
+            # 출고 이력 탭
+            hw   = ss.worksheet(LANDING_HISTORY)
+            hraw = hw.get_all_values()
+            hdf  = pd.DataFrame(hraw[1:], columns=hraw[0]) if len(hraw) > 1 else pd.DataFrame()
+
+            return mdf, hdf
+        except Exception as e:
+            return None, str(e)
+
+    mdf, hdf = load_landing()
+
+    if mdf is None:
+        st.error(f"랜딩장비 시트 로드 실패: {hdf}")
+        st.stop()
+
+    # ── 마스터 컬럼 이름 정리
+    # 열: NO / 구분 / S/N / 출고일 / 반납예정일 / 반납일 / 랜딩장소 / 현위치 / 랜딩요청자 / 메일 / 비고
+    COL_TYPE = "구분"
+    COL_SHIP = "출고일"
+    COL_RET  = "반납일"
+    COL_DUE  = "반납예정일"
+    COL_RPM  = "랜딩요청자"
+
+    # 날짜 파싱
+    for col in [COL_SHIP, COL_RET, COL_DUE]:
+        if col in mdf.columns:
+            mdf[col] = pd.to_datetime(mdf[col], errors="coerce")
+
+    today = pd.Timestamp(datetime.date.today())
+
+    def calc_stats(df, type_val):
+        sub = df[df[COL_TYPE] == type_val] if COL_TYPE in df.columns else df
+        total   = len(sub)
+        shipped = sub[COL_SHIP].notna() & sub[COL_RET].isna() if COL_SHIP in sub.columns and COL_RET in sub.columns else pd.Series([False]*len(sub))
+        out_cnt = shipped.sum()
+        hold    = total - out_cnt
+        overdue = (shipped & ((today - sub[COL_SHIP]).dt.days >= LANDING_OVERDUE)).sum() if COL_SHIP in sub.columns else 0
+        return int(hold), int(out_cnt), int(overdue)
+
+    sg_hold, sg_out, sg_over = calc_stats(mdf, "싱글")
+    dl_hold, dl_out, dl_over = calc_stats(mdf, "듀얼")
+
+    # ── 헤더
+    st.markdown("""
+    <div style='background:#1C3654;border-radius:12px;padding:14px 20px;margin-bottom:16px;
+                display:flex;align-items:center;gap:10px;'>
+      <span style='font-size:20px;'>🚀</span>
+      <span style='color:#fff;font-size:16px;font-weight:700;'>랜딩장비 현황</span>
+    </div>""", unsafe_allow_html=True)
+
+    # ── KPI 행 1: 싱글
+    st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:0 0 6px;'>◼ 싱글채널</p>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.metric("보유 수량",     f"{sg_hold}대")
+    c2.metric("출고 수량",     f"{sg_out}대")
+    c3.metric("장기 미회수",   f"{sg_over}대",
+              delta=f"-{sg_over}대" if sg_over else None,
+              delta_color="inverse")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── KPI 행 2: 듀얼
+    st.markdown("<p style='font-size:12px;font-weight:700;color:#C45D31;margin:0 0 6px;'>◼ 듀얼채널</p>", unsafe_allow_html=True)
+    c4, c5, c6 = st.columns(3)
+    c4.metric("보유 수량",     f"{dl_hold}대")
+    c5.metric("출고 수량",     f"{dl_out}대")
+    c6.metric("장기 미회수",   f"{dl_over}대",
+              delta=f"-{dl_over}대" if dl_over else None,
+              delta_color="inverse")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── RPM별 신청 횟수 (출고 이력 기반)
+    st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:0 0 8px;'>◼ RPM별 출고 신청 횟수</p>", unsafe_allow_html=True)
+
+    if isinstance(hdf, pd.DataFrame) and not hdf.empty and "랜딩요청자" in hdf.columns:
+        rpm_cnt = (
+            hdf[hdf["랜딩요청자"].str.strip() != ""]["랜딩요청자"]
+            .str.strip()
+            .value_counts()
+            .reset_index()
+        )
+        rpm_cnt.columns = ["랜딩요청자", "신청 횟수"]
+
+        fig_rpm = go.Figure(go.Bar(
+            x=rpm_cnt["신청 횟수"],
+            y=rpm_cnt["랜딩요청자"],
+            orientation="h",
+            marker_color="#1C3654",
+            text=rpm_cnt["신청 횟수"],
+            textposition="outside",
+        ))
+        fig_rpm.update_layout(
+            height=max(200, len(rpm_cnt) * 44),
+            margin=dict(l=0, r=40, t=10, b=10),
+            xaxis=dict(showgrid=False, visible=False),
+            yaxis=dict(autorange="reversed"),
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+            font=dict(family="Noto Sans KR", size=12),
+        )
+        with st.container(border=True):
+            st.plotly_chart(fig_rpm, use_container_width=True)
+    else:
+        st.info("출고 이력 데이터가 없습니다.")
+
+    # ── 현재 출고중 목록
+    st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:8px 0 6px;'>◼ 현재 출고중 장비</p>", unsafe_allow_html=True)
+    if COL_SHIP in mdf.columns and COL_RET in mdf.columns:
+        out_df = mdf[mdf[COL_SHIP].notna() & mdf[COL_RET].isna()].copy()
+        if not out_df.empty:
+            out_df["경과일"] = (today - out_df[COL_SHIP]).dt.days.astype(int)
+            out_df["상태"] = out_df["경과일"].apply(
+                lambda d: "🔴 장기미회수" if d >= LANDING_OVERDUE else "🟢 출고중"
+            )
+            show_cols = [c for c in ["NO","구분","S/N","출고일","반납예정일","랜딩장소","랜딩요청자","경과일","상태"] if c in out_df.columns]
+            view = out_df[show_cols].copy()
+            for dc in ["출고일","반납예정일"]:
+                if dc in view.columns:
+                    view[dc] = pd.to_datetime(view[dc], errors="coerce").dt.strftime("%Y-%m-%d").fillna("")
+            def _hl(row):
+                if "장기미회수" in str(row.get("상태","")): return ["background-color:#fff1f0"]*len(row)
+                return [""]*len(row)
+            with st.container(border=True):
+                st.dataframe(view.style.apply(_hl, axis=1),
+                             use_container_width=True, hide_index=True)
+        else:
+            st.success("현재 출고중인 장비가 없습니다.")
+    else:
+        st.info("마스터 시트 컬럼을 확인하세요.")
