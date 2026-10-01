@@ -1329,7 +1329,7 @@ with tab8:
         st.info("출고 이력 데이터가 없습니다.")
 
     # ── 현재 출고중 목록
-    col_out, col_hold = st.columns(2)
+    col_out, col_hold = st.columns([1, 1])
 
     # ── 출고중 장비
     with col_out:
@@ -1350,7 +1350,7 @@ with tab8:
                     return [""]*len(row)
                 with st.container(border=True):
                     st.dataframe(view.style.apply(_hl_out, axis=1),
-                                 use_container_width=True, hide_index=True)
+                                 use_container_width=True, hide_index=True, height=400)
             else:
                 st.success("현재 출고중인 장비가 없습니다.")
         else:
@@ -1366,7 +1366,7 @@ with tab8:
                 show_cols2 = [c for c in ["NO","구분","S/N","상태"] if c in hold_df.columns]
                 view2 = hold_df[show_cols2].copy()
                 with st.container(border=True):
-                    st.dataframe(view2, use_container_width=True, hide_index=True)
+                    st.dataframe(view2, use_container_width=True, hide_index=True, height=400)
             else:
                 st.info("보유중인 장비가 없습니다.")
         else:
