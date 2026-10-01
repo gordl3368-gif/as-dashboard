@@ -1239,6 +1239,10 @@ with tab8:
     COL_DUE  = "반납예정일"
     COL_RPM  = "랜딩요청자"
 
+    # 구분 열 forward-fill (병합 셀 → 첫 행만 값 있음)
+    if COL_TYPE in mdf.columns:
+        mdf[COL_TYPE] = mdf[COL_TYPE].replace("", pd.NA).ffill()
+
     # 날짜 파싱
     for col in [COL_SHIP, COL_RET, COL_DUE]:
         if col in mdf.columns:
