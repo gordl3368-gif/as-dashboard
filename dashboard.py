@@ -1329,26 +1329,45 @@ with tab8:
         st.info("출고 이력 데이터가 없습니다.")
 
     # ── 현재 출고중 목록
-    st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:8px 0 6px;'>◼ 현재 출고중 장비</p>", unsafe_allow_html=True)
-    if COL_SHIP in mdf.columns and COL_RET in mdf.columns:
-        out_df = mdf[mdf[COL_SHIP].notna() & mdf[COL_RET].isna()].copy()
-        if not out_df.empty:
-            out_df["경과일"] = (today - out_df[COL_SHIP]).dt.days.astype(int)
-            out_df["상태"] = out_df["경과일"].apply(
-                lambda d: "🔴 장기미회수" if d >= LANDING_OVERDUE else "🟢 출고중"
-            )
-            show_cols = [c for c in ["NO","구분","S/N","출고일","반납예정일","랜딩장소","랜딩요청자","경과일","상태"] if c in out_df.columns]
-            view = out_df[show_cols].copy()
-            for dc in ["출고일","반납예정일"]:
-                if dc in view.columns:
-                    view[dc] = pd.to_datetime(view[dc], errors="coerce").dt.strftime("%Y-%m-%d").fillna("")
-            def _hl(row):
-                if "장기미회수" in str(row.get("상태","")): return ["background-color:#fff1f0"]*len(row)
-                return [""]*len(row)
-            with st.container(border=True):
-                st.dataframe(view.style.apply(_hl, axis=1),
-                             use_container_width=True, hide_index=True)
+    col_out, col_hold = st.columns(2)
+
+    # ── 출고중 장비
+    with col_out:
+        st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:8px 0 6px;'>◼ 현재 출고중 장비</p>", unsafe_allow_html=True)
+        if COL_SHIP in mdf.columns and COL_RET in mdf.columns:
+            out_df = mdf[mdf[COL_SHIP].notna() & mdf[COL_RET].isna()].copy()
+            if not out_df.empty:
+                out_df["경과일"] = (today - out_df[COL_SHIP]).dt.days.astype(int)
+                out_df["상태"] = out_df["경과일"].apply(
+                    lambda d: "🔴 장기미회수" if d >= LANDING_OVERDUE else "🟢 출고중"
+                )
+                show_cols = [c for c in ["NO","구분","S/N","출고일","랜딩장소","랜딩요청자","경과일","상태"] if c in out_df.columns]
+                view = out_df[show_cols].copy()
+                if "출고일" in view.columns:
+                    view["출고일"] = pd.to_datetime(view["출고일"], errors="coerce").dt.strftime("%Y-%m-%d").fillna("")
+                def _hl_out(row):
+                    if "장기미회수" in str(row.get("상태","")): return ["background-color:#fff1f0"]*len(row)
+                    return [""]*len(row)
+                with st.container(border=True):
+                    st.dataframe(view.style.apply(_hl_out, axis=1),
+                                 use_container_width=True, hide_index=True)
+            else:
+                st.success("현재 출고중인 장비가 없습니다.")
         else:
-            st.success("현재 출고중인 장비가 없습니다.")
-    else:
-        st.info("마스터 시트 컬럼을 확인하세요.")
+            st.info("마스터 시트 컬럼을 확인하세요.")
+
+    # ── 보유중 장비
+    with col_hold:
+        st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:8px 0 6px;'>◼ 현재 보유중 장비</p>", unsafe_allow_html=True)
+        if COL_SHIP in mdf.columns and COL_RET in mdf.columns:
+            hold_df = mdf[mdf[COL_SHIP].isna()].copy()
+            if not hold_df.empty:
+                hold_df["상태"] = "⚪ 보유중"
+                show_cols2 = [c for c in ["NO","구분","S/N","상태"] if c in hold_df.columns]
+                view2 = hold_df[show_cols2].copy()
+                with st.container(border=True):
+                    st.dataframe(view2, use_container_width=True, hide_index=True)
+            else:
+                st.info("보유중인 장비가 없습니다.")
+        else:
+            st.info("마스터 시트 컬럼을 확인하세요.")
