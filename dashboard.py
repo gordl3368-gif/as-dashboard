@@ -1239,6 +1239,8 @@ with tab8:
     COL_DUE  = "반납예정일"
     COL_RPM  = "랜딩요청자"
 
+    COL_NOTE = "비고"
+
     # 구분 열 forward-fill (병합 셀 → 첫 행만 값 있음)
     if COL_TYPE in mdf.columns:
         mdf[COL_TYPE] = mdf[COL_TYPE].replace("", pd.NA).ffill()
@@ -1247,6 +1249,12 @@ with tab8:
     for col in [COL_SHIP, COL_RET, COL_DUE]:
         if col in mdf.columns:
             mdf[col] = pd.to_datetime(mdf[col], errors="coerce")
+
+    # 분실 장비 제외
+    if COL_NOTE in mdf.columns:
+        mdf_active = mdf[~mdf[COL_NOTE].astype(str).str.contains("분실", na=False)].copy()
+    else:
+        mdf_active = mdf.copy()
 
     today = pd.Timestamp(datetime.date.today())
 
@@ -1259,8 +1267,8 @@ with tab8:
         overdue = int((shipped & ((today - sub[COL_SHIP]).dt.days >= LANDING_OVERDUE)).sum()) if COL_SHIP in sub.columns else 0
         return total, int(hold), out_cnt, overdue
 
-    sg_total, sg_hold, sg_out, sg_over = calc_stats(mdf, "싱글")
-    dl_total, dl_hold, dl_out, dl_over = calc_stats(mdf, "듀얼")
+    sg_total, sg_hold, sg_out, sg_over = calc_stats(mdf_active, "싱글")
+    dl_total, dl_hold, dl_out, dl_over = calc_stats(mdf_active, "듀얼")
 
     # ── 헤더
     st.markdown("""
@@ -1334,8 +1342,8 @@ with tab8:
     # ── 출고중 장비
     with col_out:
         st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:8px 0 6px;'>◼ 현재 출고중 장비</p>", unsafe_allow_html=True)
-        if COL_SHIP in mdf.columns and COL_RET in mdf.columns:
-            out_df = mdf[mdf[COL_SHIP].notna() & mdf[COL_RET].isna()].copy()
+        if COL_SHIP in mdf_active.columns and COL_RET in mdf_active.columns:
+            out_df = mdf_active[mdf_active[COL_SHIP].notna() & mdf_active[COL_RET].isna()].copy()
             if not out_df.empty:
                 out_df["경과일"] = (today - out_df[COL_SHIP]).dt.days.astype(int)
                 out_df["상태"] = out_df["경과일"].apply(
@@ -1359,8 +1367,8 @@ with tab8:
     # ── 보유중 장비
     with col_hold:
         st.markdown("<p style='font-size:12px;font-weight:700;color:#1C3654;margin:8px 0 6px;'>◼ 현재 보유중 장비</p>", unsafe_allow_html=True)
-        if COL_SHIP in mdf.columns and COL_RET in mdf.columns:
-            hold_df = mdf[mdf[COL_SHIP].isna()].copy()
+        if COL_SHIP in mdf_active.columns and COL_RET in mdf_active.columns:
+            hold_df = mdf_active[mdf_active[COL_SHIP].isna()].copy()
             if not hold_df.empty:
                 hold_df["상태"] = "⚪ 보유중"
                 show_cols2 = [c for c in ["NO","구분","S/N","상태"] if c in hold_df.columns]
