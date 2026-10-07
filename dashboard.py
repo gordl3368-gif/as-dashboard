@@ -931,7 +931,7 @@ with tab6:
                 ))
                 fig_avg.update_layout(
                     plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                    height=240, margin=dict(t=10, b=10, l=10, r=60),
+                    height=260, margin=dict(t=10, b=10, l=10, r=60),
                     xaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
                     yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
                     showlegend=False,
@@ -951,8 +951,8 @@ with tab6:
                         textinfo="label+percent", textfont=dict(size=12),
                     ))
                     fig_sp.update_layout(
-                        height=220, paper_bgcolor="white", font=FONT,
-                        margin=dict(t=10, b=10, l=10, r=10), showlegend=False,
+                        height=260, paper_bgcolor="white", font=FONT,
+                        margin=dict(t=20, b=20, l=10, r=10), showlegend=False,
                     )
                     st.plotly_chart(fig_sp, use_container_width=True)
 
@@ -975,7 +975,7 @@ with tab6:
                     ))
                     fig_dist.update_layout(
                         plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                        height=220, margin=dict(t=10, b=10, l=20, r=20),
+                        height=260, margin=dict(t=10, b=10, l=20, r=20),
                         xaxis=dict(gridcolor="#f0f4f8", zeroline=False, tickfont=dict(size=11)),
                         yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero",
                                    tick0=0, dtick=1),
@@ -1021,7 +1021,7 @@ with tab6:
                                             gridcolor="#f0f4f8", linecolor="#e5e7eb"),
                         ),
                         paper_bgcolor="white", font=FONT,
-                        height=260, margin=dict(t=20, b=20, l=30, r=30),
+                        height=260, margin=dict(t=10, b=10, l=30, r=30),
                         showlegend=False,
                     )
                     st.plotly_chart(fig_radar, use_container_width=True)
