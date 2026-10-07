@@ -897,9 +897,16 @@ with tab6:
         score_cols = ["전체만족도","접수편의성","담당자응대","안내및소통"]
         avgs = {c: round(sdf[c].mean(), 2) for c in score_cols if c in sdf.columns}
 
-        # KPI — 별점 시각화
+        # KPI — 별점 시각화 (전체 가운데 정렬)
         kc = st.columns(len(avgs) + 1)
-        kc[0].metric("총 응답 수", f"{total}건")
+        with kc[0]:
+            st.markdown(f"""
+<div data-testid="metric-container" style="background:#fff;border-radius:14px;
+  padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);text-align:center;">
+  <div style="font-size:11px;color:#9ca3af;letter-spacing:0.3px;">총 응답 수</div>
+  <div style="font-size:24px;font-weight:700;color:#C45D31;margin:4px 0 2px;">{total}건</div>
+  <div style="font-size:17px;color:#9ca3af;">─</div>
+</div>""", unsafe_allow_html=True)
         for i, (col, val) in enumerate(avgs.items()):
             _stars = "★" * round(val) + "☆" * (5 - round(val))
             _label = SURVEY_LABELS.get(col, col)
@@ -914,47 +921,25 @@ with tab6:
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
-        c_left, c_right = st.columns(2)
-
-        # 항목별 평균 가로 막대
-        with c_left:
-            with st.container(border=True):
-                st.markdown("**항목별 평균 점수**")
-                fig_avg = go.Figure(go.Bar(
-                    y=[SURVEY_LABELS.get(k, k) for k in avgs.keys()],
-                    x=list(avgs.values()),
-                    orientation="h",
-                    marker=dict(color="#F36C21", opacity=0.85),
-                    text=[f"{v}점" for v in avgs.values()],
-                    textposition="outside",
-                    textfont=dict(size=12),
-                ))
-                fig_avg.update_layout(
-                    plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                    height=260, margin=dict(t=10, b=10, l=10, r=60),
-                    xaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
-                    yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
-                    showlegend=False,
-                )
-                st.plotly_chart(fig_avg, use_container_width=True)
-
-        # 수리기간 분포
-        with c_right:
-            with st.container(border=True):
-                st.markdown("**수리 기간 평가 분포**")
-                if "수리기간" in sdf.columns:
-                    sp = sdf["수리기간"].value_counts().reindex(["빠름","보통","느림"], fill_value=0)
-                    fig_sp = go.Figure(go.Pie(
-                        labels=sp.index, values=sp.values, hole=0.5,
-                        marker=dict(colors=["#34a853","#fbbc04","#ea4335"],
-                                    line=dict(color="white", width=2)),
-                        textinfo="label+percent", textfont=dict(size=12),
-                    ))
-                    fig_sp.update_layout(
-                        height=260, paper_bgcolor="white", font=FONT,
-                        margin=dict(t=20, b=20, l=10, r=10), showlegend=False,
-                    )
-                    st.plotly_chart(fig_sp, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("**항목별 평균 점수**")
+            fig_avg = go.Figure(go.Bar(
+                y=[SURVEY_LABELS.get(k, k) for k in avgs.keys()],
+                x=list(avgs.values()),
+                orientation="h",
+                marker=dict(color="#F36C21", opacity=0.85),
+                text=[f"{v}점" for v in avgs.values()],
+                textposition="outside",
+                textfont=dict(size=13),
+            ))
+            fig_avg.update_layout(
+                plot_bgcolor="white", paper_bgcolor="white", font=FONT,
+                height=220, margin=dict(t=10, b=10, l=10, r=60),
+                xaxis=dict(range=[0, 5.5], gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
+                yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
+                showlegend=False,
+            )
+            st.plotly_chart(fig_avg, use_container_width=True)
 
         # 전체만족도 분포 + 개별 응답 스캐터
         _tr_left, _tr_right = st.columns(2)
