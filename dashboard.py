@@ -897,11 +897,20 @@ with tab6:
         score_cols = ["전체만족도","접수편의성","담당자응대","안내및소통"]
         avgs = {c: round(sdf[c].mean(), 2) for c in score_cols if c in sdf.columns}
 
-        # KPI
+        # KPI — 별점 시각화
         kc = st.columns(len(avgs) + 1)
         kc[0].metric("총 응답 수", f"{total}건")
         for i, (col, val) in enumerate(avgs.items()):
-            kc[i+1].metric(SURVEY_LABELS.get(col, col), f"{val} / 5")
+            _stars = "★" * round(val) + "☆" * (5 - round(val))
+            _label = SURVEY_LABELS.get(col, col)
+            with kc[i+1]:
+                st.markdown(f"""
+<div data-testid="metric-container" style="background:#fff;border-radius:14px;
+  padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);">
+  <div style="font-size:11px;color:#9ca3af;letter-spacing:0.3px;">{_label}</div>
+  <div style="font-size:24px;font-weight:700;color:#C45D31;margin:4px 0 2px;">{val} <span style="font-size:13px;color:#9ca3af;">/ 5</span></div>
+  <div style="font-size:17px;color:#F36C21;letter-spacing:2px;">{_stars}</div>
+</div>""", unsafe_allow_html=True)
 
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
@@ -976,33 +985,46 @@ with tab6:
 
         with _tr_right:
             with st.container(border=True):
-                st.markdown("**개별 응답 추이**")
-                trend = sdf.dropna(subset=["제출일시","전체만족도"]).copy()
-                trend = trend.sort_values("제출일시")
-                if not trend.empty:
-                    _hover = trend.get("업체명", pd.Series([""] * len(trend))).fillna("").astype(str)
-                    fig_sc = go.Figure(go.Scatter(
-                        x=trend["제출일시"],
-                        y=trend["전체만족도"],
-                        mode="markers+text",
-                        marker=dict(size=14, color="#F36C21",
-                                    line=dict(width=2, color="white"),
-                                    symbol="circle"),
-                        text=trend["전체만족도"].astype(int).astype(str) + "점",
-                        textposition="top center",
-                        textfont=dict(size=11, color="#F36C21"),
-                        hovertext=_hover,
-                        hovertemplate="%{hovertext}<br>%{x|%m/%d}<br>%{y}점<extra></extra>",
+                st.markdown("**항목별 평균 레이더**")
+                _radar_cats = [SURVEY_LABELS.get(c, c) for c in score_cols if c in avgs]
+                _radar_vals = [avgs[c] for c in score_cols if c in avgs]
+                if _radar_cats:
+                    _rc = _radar_cats + [_radar_cats[0]]
+                    _rv = _radar_vals + [_radar_vals[0]]
+                    fig_radar = go.Figure()
+                    fig_radar.add_trace(go.Scatterpolar(
+                        r=[5]*len(_rc), theta=_rc,
+                        fill="toself",
+                        fillcolor="rgba(243,108,33,0.06)",
+                        line=dict(color="rgba(243,108,33,0.2)", width=1, dash="dot"),
+                        hoverinfo="skip", showlegend=False,
                     ))
-                    fig_sc.update_layout(
-                        plot_bgcolor="white", paper_bgcolor="white", font=FONT,
-                        height=220, margin=dict(t=30, b=30, l=40, r=10),
-                        yaxis=dict(range=[0, 5.8], gridcolor="#f0f4f8", zeroline=False,
-                                   tick0=1, dtick=1, tickvals=[1,2,3,4,5]),
-                        xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
+                    fig_radar.add_trace(go.Scatterpolar(
+                        r=_rv, theta=_rc,
+                        fill="toself",
+                        fillcolor="rgba(243,108,33,0.18)",
+                        line=dict(color="#F36C21", width=2.5),
+                        marker=dict(size=8, color="#F36C21",
+                                    line=dict(width=2, color="white")),
+                        text=[f"{v}점" for v in _rv],
+                        hovertemplate="%{theta}<br><b>%{r}점</b><extra></extra>",
+                        showlegend=False,
+                    ))
+                    fig_radar.update_layout(
+                        polar=dict(
+                            bgcolor="white",
+                            radialaxis=dict(visible=True, range=[0, 5],
+                                           tickvals=[1,2,3,4,5],
+                                           tickfont=dict(size=9, color="#9ca3af"),
+                                           gridcolor="#f0f4f8", linecolor="#e5e7eb"),
+                            angularaxis=dict(tickfont=dict(size=11, color="#374151"),
+                                            gridcolor="#f0f4f8", linecolor="#e5e7eb"),
+                        ),
+                        paper_bgcolor="white", font=FONT,
+                        height=260, margin=dict(t=20, b=20, l=30, r=30),
                         showlegend=False,
                     )
-                    st.plotly_chart(fig_sc, use_container_width=True)
+                    st.plotly_chart(fig_radar, use_container_width=True)
 
         # 최근 응답 목록
         with st.container(border=True):
