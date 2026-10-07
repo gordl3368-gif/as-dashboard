@@ -906,7 +906,7 @@ with tab6:
             with kc[i+1]:
                 st.markdown(f"""
 <div data-testid="metric-container" style="background:#fff;border-radius:14px;
-  padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);">
+  padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);text-align:center;">
   <div style="font-size:11px;color:#9ca3af;letter-spacing:0.3px;">{_label}</div>
   <div style="font-size:24px;font-weight:700;color:#C45D31;margin:4px 0 2px;">{val} <span style="font-size:13px;color:#9ca3af;">/ 5</span></div>
   <div style="font-size:17px;color:#F36C21;letter-spacing:2px;">{_stars}</div>
