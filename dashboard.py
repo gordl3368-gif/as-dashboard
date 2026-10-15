@@ -340,7 +340,7 @@ with k6: st.metric("중복 S/N", f"{dup_cnt}건",
 st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 all_months = sorted(df["월"].dropna().unique().astype(int).tolist())
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회", "🚀 랜딩장비 현황"])
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs(["📊 종합현황", "🏷️ 제품별 분석", "🔍 유형·원인 분석", "📋 상세목록", "⚠️ 중복 S/N", "⭐ 만족도", "🏢 업체별 조회", "🚀 랜딩장비 현황", "🔄 듀얼채널 업그레이드"])
 
 
 # ── 헬퍼 함수 ─────────────────────────────────────────────────────────────────
@@ -1296,3 +1296,168 @@ with tab8:
                 st.info("보유중인 장비가 없습니다.")
         else:
             st.info("마스터 시트 컬럼을 확인하세요.")
+
+
+# ═══ TAB 9: 듀얼채널 업그레이드 현황 ═══════════════════════════════════════════
+UPGRADE_SHEET = "큐라시스2 업그레이드 관리장"
+
+with tab9:
+    @st.cache_data(ttl=300)
+    def load_upgrade():
+        try:
+            SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+            if "gcp_service_account" in st.secrets:
+                creds = service_account.Credentials.from_service_account_info(
+                    st.secrets["gcp_service_account"], scopes=SCOPES)
+            else:
+                creds = service_account.Credentials.from_service_account_file(
+                    SA_PATH, scopes=SCOPES)
+            gc  = gspread.authorize(creds)
+            ss  = gc.open_by_key(LANDING_SS_ID)
+            ws  = ss.worksheet(UPGRADE_SHEET)
+            raw = ws.get_all_values()
+            if len(raw) < 2:
+                return pd.DataFrame()
+            df  = pd.DataFrame(raw[1:], columns=raw[0])
+            return df
+        except Exception as e:
+            return str(e)
+
+    udf_raw = load_upgrade()
+
+    if isinstance(udf_raw, str):
+        st.error(f"시트 로드 실패: {udf_raw}")
+        st.stop()
+
+    udf = udf_raw.copy()
+    udf.columns = [c.strip() for c in udf.columns]
+
+    # 병합 셀 ffill
+    for col in ["업그레이드 날짜", "병원", "대리점"]:
+        if col in udf.columns:
+            udf[col] = udf[col].replace("", pd.NA).ffill()
+
+    # Lot No 없는 행 제거
+    if "Lot No" in udf.columns:
+        udf = udf[udf["Lot No"].str.strip() != ""].copy()
+
+    # 날짜 파싱
+    if "업그레이드 날짜" in udf.columns:
+        udf["업그레이드 날짜"] = pd.to_datetime(udf["업그레이드 날짜"], errors="coerce")
+
+    # 계산서발행 여부
+    if "계산서발행" in udf.columns:
+        udf["계산서발행_완료"] = udf["계산서발행"].astype(str).str.strip().str.lower() == "o"
+    else:
+        udf["계산서발행_완료"] = False
+
+    # ── KPI ──────────────────────────────────────────────────────────────────
+    total_lots   = len(udf)
+    total_hosp   = udf["병원"].nunique() if "병원" in udf.columns else 0
+    invoice_done = int(udf["계산서발행_완료"].sum())
+    invoice_pct  = round(invoice_done / total_lots * 100) if total_lots > 0 else 0
+
+    kpi_cols = st.columns(4)
+    for col, (label, val) in zip(kpi_cols, [
+        ("총 업그레이드 대수", f"{total_lots}대"),
+        ("업그레이드 병원 수", f"{total_hosp}개소"),
+        ("계산서 발행 완료",   f"{invoice_done}건"),
+        ("계산서 발행률",      f"{invoice_pct}%"),
+    ]):
+        with col:
+            st.markdown(f"""
+<div data-testid="metric-container" style="background:#fff;border-radius:14px;
+  padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,0.07);text-align:center;">
+  <div style="font-size:11px;color:#9ca3af;letter-spacing:0.3px;">{label}</div>
+  <div style="font-size:28px;font-weight:700;color:#C45D31;margin:6px 0 0;">{val}</div>
+</div>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+    # ── 병원별 현황 바 차트 ───────────────────────────────────────────────────
+    if "병원" in udf.columns:
+        hosp_summary = (
+            udf.groupby("병원")
+            .agg(총대수=("Lot No", "count"), 계산서완료=("계산서발행_완료", "sum"))
+            .reset_index()
+            .sort_values("총대수", ascending=True)
+        )
+        hosp_summary["미완료"] = hosp_summary["총대수"] - hosp_summary["계산서완료"]
+
+        fig_hosp = go.Figure()
+        fig_hosp.add_trace(go.Bar(
+            y=hosp_summary["병원"], x=hosp_summary["계산서완료"],
+            name="계산서 발행 완료", orientation="h",
+            marker=dict(color="#F36C21", opacity=0.9),
+            text=hosp_summary["계산서완료"].apply(lambda x: f"{x}대" if x > 0 else ""),
+            textposition="inside", textfont=dict(size=12, color="white"),
+        ))
+        fig_hosp.add_trace(go.Bar(
+            y=hosp_summary["병원"], x=hosp_summary["미완료"],
+            name="계산서 미발행", orientation="h",
+            marker=dict(color="#e2e6ea", opacity=0.9),
+            text=hosp_summary["미완료"].apply(lambda x: f"{x}대" if x > 0 else ""),
+            textposition="inside", textfont=dict(size=12, color="#6b7280"),
+        ))
+        fig_hosp.update_layout(
+            barmode="stack",
+            plot_bgcolor="white", paper_bgcolor="white",
+            font=dict(family="Noto Sans KR, sans-serif", size=13),
+            height=max(260, 36 * len(hosp_summary) + 80),
+            margin=dict(t=10, b=10, l=10, r=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                        font=dict(size=12)),
+            xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
+            yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
+        )
+        with st.container(border=True):
+            st.markdown("**병원별 업그레이드 현황**")
+            st.plotly_chart(fig_hosp, use_container_width=True)
+
+    # ── 월별 추이 + 대리점별 현황 ────────────────────────────────────────────
+    _uc_left, _uc_right = st.columns(2)
+
+    with _uc_left:
+        with st.container(border=True):
+            st.markdown("**월별 업그레이드 추이**")
+            if "업그레이드 날짜" in udf.columns:
+                udf["월"] = udf["업그레이드 날짜"].dt.to_period("M").astype(str)
+                monthly = udf.groupby("월").size().reset_index(name="대수")
+                fig_mo = go.Figure(go.Bar(
+                    x=monthly["월"], y=monthly["대수"],
+                    marker=dict(color="#F36C21", opacity=0.85),
+                    text=monthly["대수"].astype(str) + "대",
+                    textposition="outside", textfont=dict(size=12),
+                ))
+                fig_mo.update_layout(
+                    plot_bgcolor="white", paper_bgcolor="white",
+                    font=dict(family="Noto Sans KR, sans-serif", size=13),
+                    height=280, margin=dict(t=10, b=10, l=10, r=10),
+                    xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
+                    yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero"),
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_mo, use_container_width=True)
+
+    with _uc_right:
+        with st.container(border=True):
+            st.markdown("**대리점별 현황**")
+            if "대리점" in udf.columns:
+                dealer_sum = (
+                    udf.groupby("대리점")
+                    .agg(대수=("Lot No", "count"), 완료=("계산서발행_완료", "sum"))
+                    .reset_index()
+                    .sort_values("대수", ascending=False)
+                )
+                dealer_sum["발행률"] = (dealer_sum["완료"] / dealer_sum["대수"] * 100).round(0).astype(int).astype(str) + "%"
+                dealer_sum = dealer_sum.rename(columns={"대수": "업그레이드 대수", "완료": "계산서 발행"})
+                st.dataframe(dealer_sum, use_container_width=True, hide_index=True, height=280)
+
+    # ── 전체 목록 ─────────────────────────────────────────────────────────────
+    with st.container(border=True):
+        st.markdown("**전체 업그레이드 목록**")
+        show_u_cols = [c for c in ["업그레이드 날짜", "병원", "대리점", "Lot No", "계산서발행"] if c in udf.columns]
+        disp_u = udf[show_u_cols].copy()
+        if "업그레이드 날짜" in disp_u.columns:
+            disp_u["업그레이드 날짜"] = disp_u["업그레이드 날짜"].dt.strftime("%Y-%m-%d")
+        st.dataframe(disp_u, use_container_width=True, hide_index=True, height=350)
