@@ -1344,6 +1344,7 @@ with tab9:
     # 날짜 파싱
     if "업그레이드 날짜" in udf.columns:
         udf["업그레이드 날짜"] = pd.to_datetime(udf["업그레이드 날짜"], errors="coerce")
+        udf["월"] = udf["업그레이드 날짜"].dt.to_period("M").astype(str)
 
     # 계산서발행 여부
     if "계산서발행" in udf.columns:
@@ -1374,65 +1375,24 @@ with tab9:
 
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    # ── 병원별 현황 바 차트 ───────────────────────────────────────────────────
-    if "병원" in udf.columns:
-        hosp_summary = (
-            udf.groupby("병원")
-            .agg(총대수=("Lot No", "count"), 계산서완료=("계산서발행_완료", "sum"))
-            .reset_index()
-            .sort_values("총대수", ascending=True)
-        )
-        hosp_summary["미완료"] = hosp_summary["총대수"] - hosp_summary["계산서완료"]
-
-        fig_hosp = go.Figure()
-        fig_hosp.add_trace(go.Bar(
-            y=hosp_summary["병원"], x=hosp_summary["계산서완료"],
-            name="계산서 발행 완료", orientation="h",
-            marker=dict(color="#F36C21", opacity=0.9),
-            text=hosp_summary["계산서완료"].apply(lambda x: f"{x}대" if x > 0 else ""),
-            textposition="inside", textfont=dict(size=12, color="white"),
-        ))
-        fig_hosp.add_trace(go.Bar(
-            y=hosp_summary["병원"], x=hosp_summary["미완료"],
-            name="계산서 미발행", orientation="h",
-            marker=dict(color="#e2e6ea", opacity=0.9),
-            text=hosp_summary["미완료"].apply(lambda x: f"{x}대" if x > 0 else ""),
-            textposition="inside", textfont=dict(size=12, color="#6b7280"),
-        ))
-        fig_hosp.update_layout(
-            barmode="stack",
-            plot_bgcolor="white", paper_bgcolor="white",
-            font=dict(family="Noto Sans KR, sans-serif", size=13),
-            height=max(260, 36 * len(hosp_summary) + 80),
-            margin=dict(t=10, b=10, l=10, r=10),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                        font=dict(size=12)),
-            xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
-            yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
-        )
-        with st.container(border=True):
-            st.markdown("**병원별 업그레이드 현황**")
-            st.plotly_chart(fig_hosp, use_container_width=True)
-
-    # ── 월별 추이 + 대리점별 현황 ────────────────────────────────────────────
+    # ── 월별 업그레이드 건수 + 대리점별 현황 ─────────────────────────────────
     _uc_left, _uc_right = st.columns(2)
 
     with _uc_left:
         with st.container(border=True):
-            st.markdown("**월별 업그레이드 추이**")
-            if "업그레이드 날짜" in udf.columns:
-                udf["월"] = udf["업그레이드 날짜"].dt.to_period("M").astype(str)
-                monthly = udf.groupby("월").size().reset_index(name="대수")
+            st.markdown("**월별 업그레이드 건수**")
+            if "월" in udf.columns:
+                monthly = udf.groupby("월").size().reset_index(name="건수")
                 fig_mo = go.Figure(go.Bar(
-                    x=monthly["월"], y=monthly["대수"],
+                    x=monthly["월"], y=monthly["건수"],
                     marker=dict(color="#F36C21", opacity=0.85),
-                    text=monthly["대수"].astype(str) + "대",
-                    textposition="outside", textfont=dict(size=12),
+                    text=monthly["건수"].astype(str) + "대",
+                    textposition="outside", textfont=dict(size=13),
                 ))
                 fig_mo.update_layout(
                     plot_bgcolor="white", paper_bgcolor="white",
                     font=dict(family="Noto Sans KR, sans-serif", size=13),
-                    height=280, margin=dict(t=10, b=10, l=10, r=10),
+                    height=280, margin=dict(t=30, b=10, l=10, r=10),
                     xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
                     yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero"),
                     showlegend=False,
@@ -1441,23 +1401,36 @@ with tab9:
 
     with _uc_right:
         with st.container(border=True):
-            st.markdown("**대리점별 현황**")
+            st.markdown("**대리점별 업그레이드 현황**")
             if "대리점" in udf.columns:
                 dealer_sum = (
                     udf.groupby("대리점")
                     .agg(대수=("Lot No", "count"), 완료=("계산서발행_완료", "sum"))
                     .reset_index()
-                    .sort_values("대수", ascending=False)
+                    .sort_values("대수", ascending=True)
                 )
-                dealer_sum["발행률"] = (dealer_sum["완료"] / dealer_sum["대수"] * 100).round(0).astype(int).astype(str) + "%"
-                dealer_sum = dealer_sum.rename(columns={"대수": "업그레이드 대수", "완료": "계산서 발행"})
-                st.dataframe(dealer_sum, use_container_width=True, hide_index=True, height=280)
+                fig_dealer = go.Figure(go.Bar(
+                    y=dealer_sum["대리점"], x=dealer_sum["대수"],
+                    orientation="h",
+                    marker=dict(color="#C45D31", opacity=0.85),
+                    text=dealer_sum["대수"].astype(str) + "대",
+                    textposition="outside", textfont=dict(size=12),
+                ))
+                fig_dealer.update_layout(
+                    plot_bgcolor="white", paper_bgcolor="white",
+                    font=dict(family="Noto Sans KR, sans-serif", size=13),
+                    height=280, margin=dict(t=10, b=10, l=10, r=60),
+                    xaxis=dict(gridcolor="#f0f4f8", zeroline=False, showticklabels=False),
+                    yaxis=dict(gridcolor="rgba(0,0,0,0)", zeroline=False),
+                    showlegend=False,
+                )
+                st.plotly_chart(fig_dealer, use_container_width=True)
 
-    # ── 전체 목록 ─────────────────────────────────────────────────────────────
+    # ── 업그레이드 S/N 관리 테이블 ───────────────────────────────────────────
     with st.container(border=True):
-        st.markdown("**전체 업그레이드 목록**")
+        st.markdown("**업그레이드 완료 S/N 목록**")
         show_u_cols = [c for c in ["업그레이드 날짜", "병원", "대리점", "Lot No", "계산서발행"] if c in udf.columns]
         disp_u = udf[show_u_cols].copy()
         if "업그레이드 날짜" in disp_u.columns:
             disp_u["업그레이드 날짜"] = disp_u["업그레이드 날짜"].dt.strftime("%Y-%m-%d")
-        st.dataframe(disp_u, use_container_width=True, hide_index=True, height=350)
+        st.dataframe(disp_u, use_container_width=True, hide_index=True, height=400)
