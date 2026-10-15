@@ -1343,8 +1343,8 @@ with tab9:
 
     # 날짜 파싱
     if "업그레이드 날짜" in udf.columns:
-        udf["업그레이드 날짜"] = pd.to_datetime(udf["업그레이드 날짜"], errors="coerce")
-        udf["월"] = udf["업그레이드 날짜"].dt.to_period("M").astype(str)
+        udf["업그레이드 날짜"] = pd.to_datetime(udf["업그레이드 날짜"], format="%y.%m.%d", errors="coerce")
+        udf["월"] = udf["업그레이드 날짜"].dt.strftime("%Y-%m").where(udf["업그레이드 날짜"].notna(), other=pd.NA)
 
     # 계산서발행 여부
     if "계산서발행" in udf.columns:
