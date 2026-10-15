@@ -1383,21 +1383,9 @@ with tab9:
             st.markdown("**월별 업그레이드 건수**")
             if "월" in udf.columns:
                 monthly = udf.groupby("월").size().reset_index(name="건수")
-                fig_mo = go.Figure(go.Bar(
-                    x=monthly["월"], y=monthly["건수"],
-                    marker=dict(color="#F36C21", opacity=0.85),
-                    text=monthly["건수"].astype(str) + "대",
-                    textposition="outside", textfont=dict(size=13),
-                ))
-                fig_mo.update_layout(
-                    plot_bgcolor="white", paper_bgcolor="white",
-                    font=dict(family="Noto Sans KR, sans-serif", size=13),
-                    height=280, margin=dict(t=30, b=10, l=10, r=10),
-                    xaxis=dict(gridcolor="#f0f4f8", zeroline=False),
-                    yaxis=dict(gridcolor="#f0f4f8", zeroline=False, rangemode="tozero"),
-                    showlegend=False,
-                )
-                st.plotly_chart(fig_mo, use_container_width=True)
+                monthly = monthly.sort_values("월", ascending=False).reset_index(drop=True)
+                monthly.columns = ["월", "업그레이드 대수"]
+                st.dataframe(monthly, use_container_width=True, hide_index=True, height=280)
 
     with _uc_right:
         with st.container(border=True):
